@@ -154,6 +154,8 @@ export const CardItem: React.FC<Props> = React.memo(({ card, onPress, viewMode, 
               <div ref={contenedorRef} className="card-container relative w-full h-full bg-[#111]">
                    {isSelectionMode && <SelectionOverlay />}
                    
+                   {/* La imagen y el foil se inclinan juntos; las insignias, no. */}
+                   <div className="card-tilt">
                    <img 
                         src={card.img}
                         onError={onCardImageError} 
@@ -163,6 +165,7 @@ export const CardItem: React.FC<Props> = React.memo(({ card, onPress, viewMode, 
                    />
                    
                    {showFoils && !isSelectionMode && !card.isWanted && <CardFoilOverlay rarity={card.rarity} />}
+                   </div>
                    
                    {card.isWanted && !isSelectionMode && (
                         <div className="absolute inset-0 flex items-center justify-center z-40 pointer-events-none">
@@ -196,6 +199,8 @@ export const CardItem: React.FC<Props> = React.memo(({ card, onPress, viewMode, 
 
             {/* CARD IMAGE */}
             <div ref={contenedorRef} className="card-container w-full h-full bg-[#111] relative">
+                 {/* La imagen y el foil se inclinan juntos; las insignias, no. */}
+                 <div className="card-tilt">
                  <img 
                     src={card.img}
                         onError={onCardImageError} 
@@ -204,6 +209,7 @@ export const CardItem: React.FC<Props> = React.memo(({ card, onPress, viewMode, 
                     alt={card.name}
                 />
                 {showFoils && !isSelectionMode && !card.isWanted && <CardFoilOverlay rarity={card.rarity} />}
+                 </div>
 
                 {/* WANTED Overlay */}
                 {card.isWanted && !isSelectionMode && (
@@ -304,6 +310,8 @@ export const CardItem: React.FC<Props> = React.memo(({ card, onPress, viewMode, 
                     onMouseEnter={handleMouseEnter}
                     onMouseLeave={() => setHoverPos(null)}
                 >
+                    {/* La imagen y el foil se inclinan juntos; las insignias, no. */}
+                    <div className="card-tilt">
                     <img 
                         src={card.img}
                         onError={onCardImageError} 
@@ -313,6 +321,7 @@ export const CardItem: React.FC<Props> = React.memo(({ card, onPress, viewMode, 
                         decoding="async"
                     />
                     {showFoils && !isSelectionMode && !card.isWanted && <CardFoilOverlay rarity={card.rarity} />}
+                    </div>
                     
                     {card.isWanted && !isSelectionMode && (
                          <div className="absolute inset-0 flex items-center justify-center z-40 pointer-events-none">
@@ -445,6 +454,8 @@ export const CardItem: React.FC<Props> = React.memo(({ card, onPress, viewMode, 
                 {/* SELECTION OVERLAY */}
                 {isSelectionMode && <SelectionOverlay />}
 
+                {/* La imagen y el foil se inclinan juntos; las insignias, no. */}
+                <div className="card-tilt">
                 <img 
                     src={card.img}
                         onError={onCardImageError} 
@@ -455,6 +466,7 @@ export const CardItem: React.FC<Props> = React.memo(({ card, onPress, viewMode, 
                 />
 
                 {showFoils && !isSelectionMode && !card.isWanted && <CardFoilOverlay rarity={card.rarity} />}
+                </div>
                 
                 {/* WANTED Overlay */}
                 {card.isWanted && !isSelectionMode && (

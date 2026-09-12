@@ -166,36 +166,35 @@
    ========================================================================= */
 
 /*
- * Se inclinan LA IMAGEN Y EL FOIL, no el contenedor.
+ * Se inclina el envoltorio que contiene la imagen Y el foil.
  *
- * Dentro del contenedor viven también las insignias (1.ª edición, estado) y la
- * barra de color de la rareza, que son interfaz de la aplicación y no parte de
- * la carta: si se inclinan con ella parece que estén pegadas al cartón, y
- * cantaba. Al dejarlas fuera del giro se quedan quietas, como una etiqueta
- * puesta encima.
+ * Es importante que sea UN SOLO elemento el que lleva el transform y que
+ * dentro estén los dos: un `transform` crea contexto de apilamiento, así que
+ * si se lo pones al `.foil` por separado sus `mix-blend-mode` dejan de ver la
+ * imagen y el efecto se convierte en un velo plano de color. Justo el fallo
+ * que hubo aquí. Dentro del envoltorio, el foil sí ve la imagen.
  *
- * `perspective()` va dentro del propio transform para no tener que declararla
- * en cada contenedor padre, que son distintos en cada vista. El `scale` cubre
- * los pocos píxeles que el giro deja al descubierto en los bordes, ya que el
- * contenedor recorta.
+ * Las insignias (1.ª edición, estado, barra de rareza) se quedan FUERA del
+ * envoltorio: son interfaz de la aplicación, no parte del cartón, y moverse
+ * con la carta quedaba raro.
  */
-.card-container > img,
-.card-container > .foil {
-  transform: perspective(650px) rotateY(var(--rotate-x, 0deg)) rotateX(var(--rotate-y, 0deg))
+.card-tilt {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  transform: perspective(700px) rotateY(var(--rotate-x, 0deg)) rotateX(var(--rotate-y, 0deg))
     scale(var(--tilt-scale, 1));
   transition: transform 0.5s cubic-bezier(0.23, 1, 0.32, 1);
 }
 
-.card-container:hover > img,
-.card-container:hover > .foil {
+.card-container:hover .card-tilt {
   --tilt-scale: 1.03;
   /* Casi sin transición mientras se mueve: si no, la carta va por detrás de la mano. */
   transition-duration: 0.08s;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .card-container > img,
-  .card-container > .foil {
+  .card-tilt {
     transform: none;
   }
 }
@@ -237,7 +236,7 @@
   background-blend-mode: overlay;
   filter: var(--shine-filter, brightness(0.95) contrast(2.4) saturate(1.25));
   mix-blend-mode: var(--shine-blend, overlay);
-  opacity: calc(var(--shine-alpha, 0.3) + var(--card-active, 0) * var(--shine-boost, 0.4));
+  opacity: calc(var(--shine-alpha, 0.2) + var(--card-active, 0) * var(--shine-boost, 0.3));
   transition: opacity 0.35s ease;
 }
 
@@ -353,12 +352,17 @@
 
 /* Ghost: la ilustración sale casi blanca, vaciada, con halo iridiscente. */
 .foil-art--ghost::before {
-  --patron: var(--patron-arcoiris);
-  --lineas: radial-gradient(ellipse at 50% 45%, #f0f0f0 0 42%, #2a2a2a 78%);
-  --lineas-size: 100% 100%;
-  --shine-blend: screen;
-  --shine-filter: brightness(1.15) contrast(1.35) saturate(0.5);
+  /*
+   * La Ghost aclara la ilustración, pero SIN borrarla: antes la dejaba en una
+   * mancha blanca donde no se distinguía el dibujo. Velo frío y suave, y el
+   * arte se sigue viendo debajo.
+   */
+  --patron: linear-gradient(112deg, #cfd8e4, #ffffff, #cfe4e0, #ffffff, #cfd8e4);
+  --lineas: var(--lineas-horizontal);
+  --shine-blend: soft-light;
+  --shine-filter: brightness(1.1) contrast(1.1) saturate(0.35);
   --shine-alpha: 0.5;
+  --shine-boost: 0.25;
 }
 
 /*
@@ -366,15 +370,21 @@
  * una dirección clara —se compara con una huella dactilar—, de ahí el cónico.
  */
 .foil-art--oilslick::before {
-  --patron: conic-gradient(
-    from 210deg,
-    var(--sp-1), var(--sp-3), var(--sp-5), var(--sp-2), var(--sp-6), var(--sp-4), var(--sp-1)
-  );
+  /*
+   * Mancha de aceite: sin dirección fija, que es lo que la distingue. Antes se
+   * hacía con un `conic-gradient`, pero sobre un lienzo del 400 % marcaba los
+   * cuadrantes con bordes duros. Con radiales solapados queda irregular sin
+   * costuras.
+   */
+  --patron: radial-gradient(ellipse at 25% 30%, var(--sp-6), transparent 55%),
+    radial-gradient(ellipse at 75% 35%, var(--sp-4), transparent 55%),
+    radial-gradient(ellipse at 45% 75%, var(--sp-2), transparent 55%),
+    radial-gradient(ellipse at 85% 80%, var(--sp-1), transparent 55%),
+    linear-gradient(112deg, var(--sp-5), var(--sp-3));
   --lineas: var(--lineas-cristal);
   --lineas-size: 70px 70px;
-  --par-x: 1.6;
-  --par-y: 1.6;
-  --shine-filter: brightness(0.95) contrast(2.2) saturate(1.5);
+  --par-x: 1.5;
+  --par-y: 1.5;
 }
 
 .foil-art--gold::before {
@@ -519,6 +529,6 @@
   );
   mix-blend-mode: overlay;
   filter: brightness(0.9) contrast(1.6);
-  opacity: calc(var(--card-active, 0) * 0.85);
+  opacity: calc(var(--card-active, 0) * 0.5);
   transition: opacity 0.35s ease;
 }

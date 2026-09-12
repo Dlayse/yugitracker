@@ -97,8 +97,11 @@ function CartaDemo({ rareza, img, zonas }: { rareza: string; img: string; zonas:
         className="card-container relative w-full aspect-[421/614] rounded-lg overflow-hidden bg-black"
         style={{ containerType: 'inline-size' }}
       >
-        <img src={img} alt="" className="absolute inset-0 w-full h-full object-cover" />
-        <CardFoilOverlay rarity={rareza} />
+        {/* La imagen y el foil se inclinan juntos, igual que en la aplicación. */}
+        <div className="card-tilt">
+          <img src={img} alt="" className="absolute inset-0 w-full h-full object-cover" />
+          <CardFoilOverlay rarity={rareza} />
+        </div>
         {zonas && (
           <>
             <div
