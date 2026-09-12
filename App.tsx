@@ -1,0 +1,779 @@
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
+import { useStore } from './context/StoreContext';
+import { Header } from './components/Header';
+import { FolderItem } from './components/FolderItem';
+import { CardItem } from './components/CardItem';
+import { AlbumView } from './components/AlbumView'; // Import AlbumView
+import { FolderModal } from './components/Modals/FolderModal';
+import { SearchModal } from './components/Modals/SearchModal';
+import { CardModal } from './components/Modals/CardModal';
+import { ThemeModal } from './components/Modals/ThemeModal';
+import { CardFilter } from './components/CardFilter';
+import { ToastContainer } from './components/Toast';
+import { ID_ALL, getTypeWeight, getRarityWeight, normalizeStr, analyzeCardType } from './utils';
+import { Card, ApiCard, Folder, MainCardType, MonsterType, CardProperty } from './types';
+import { AnimatePresence, motion } from 'framer-motion';
+import { Trash, X } from 'lucide-react';
+
+// Helper to extract set prefix (e.g. "LOB-EN001" -> "LOB")
+const getSetPrefix = (code: string) => {
+    if (!code || code === '---') return 'N/A';
+    return code.split('-')[0];
+};
+
+function App() {
+  const { state, dispatch, toast } = useStore();
+  const { activeFolderId, view, gridSize, searchQuery, sortFolders, sortFoldersDir, sortCards, sortCardsDir, showWantedCards } = state.ui;
+
+  // Modals State
+  const [isFolderModalOpen, setIsFolderModalOpen] = useState(false);
+  const [editingFolderId, setEditingFolderId] = useState<string | null>(null);
+  const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
+  const [isCardModalOpen, setIsCardModalOpen] = useState(false);
+  const [isThemeModalOpen, setIsThemeModalOpen] = useState(false);
+  
+  // Selection Mode State
+  const [isSelectionMode, setIsSelectionMode] = useState(false);
+  const [selectedCardIds, setSelectedCardIds] = useState<Set<string>>(new Set());
+  const [selectedFolderIds, setSelectedFolderIds] = useState<Set<string>>(new Set());
+  const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false);
+
+  // Filter State
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [filters, setFilters] = useState<{
+      cardTypes: MainCardType[];
+      monsterTypes: MonsterType[];
+      properties: CardProperty[];
+      sets: string[];
+      rarities: string[];
+  }>({
+      cardTypes: [],
+      monsterTypes: [],
+      properties: [],
+      sets: [],
+      rarities: []
+  });
+
+  const activeFilterCount = filters.cardTypes.length + filters.monsterTypes.length + filters.properties.length + filters.sets.length + filters.rarities.length;
+
+  // Card Modal Data
+  const [selectedApiCard, setSelectedApiCard] = useState<ApiCard | null>(null);
+  const [editingCard, setEditingCard] = useState<Card | null>(null);
+  
+  // Track new folder creation from CardModal
+  const [lastCreatedFolderId, setLastCreatedFolderId] = useState<string | null>(null);
+
+  // Reset selection and filters when folder changes
+  useEffect(() => {
+    setIsSelectionMode(false);
+    setSelectedCardIds(new Set());
+    setSelectedFolderIds(new Set());
+    setShowBulkDeleteConfirm(false);
+    
+    // Reset Filters and Close Panel on Navigation
+    setFilters({
+        cardTypes: [],
+        monsterTypes: [],
+        properties: [],
+        sets: [],
+        rarities: []
+    });
+    setIsFilterOpen(false);
+  }, [activeFolderId]);
+
+  // --- Import Logic ---
+  const handleImport = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+        try {
+            const json = JSON.parse(ev.target?.result as string);
+            if (json.folders && json.cards) {
+                dispatch({ type: 'IMPORT_DB', payload: json });
+                toast("Base de datos importada", "ok");
+            } else {
+                toast("Archivo inválido", "err");
+            }
+        } catch (ex) {
+            toast("Error al leer archivo", "err");
+        }
+    };
+    reader.readAsText(file);
+    e.target.value = ''; 
+  };
+
+  // --- Callbacks for Optimized Children ---
+  const handleFolderEdit = useCallback((id: string) => {
+    setEditingFolderId(id);
+    setIsFolderModalOpen(true);
+  }, []);
+
+  const handleCardPress = useCallback((card: Card) => {
+      // Logic moved to CardItem: if selection mode is on, it calls onToggleSelect instead
+      setSelectedApiCard(null);
+      setEditingCard(card);
+      setIsCardModalOpen(true);
+  }, []);
+
+  const handleToggleSelectCard = useCallback((cardId: string) => {
+      setSelectedCardIds(prev => {
+          const next = new Set(prev);
+          if (next.has(cardId)) {
+              next.delete(cardId);
+          } else {
+              next.add(cardId);
+          }
+          return next;
+      });
+  }, []);
+
+  const handleToggleSelectFolder = useCallback((folderId: string) => {
+      if (folderId === ID_ALL) return; // Prevent Selecting System Folder
+      setSelectedFolderIds(prev => {
+          const next = new Set(prev);
+          if (next.has(folderId)) {
+              next.delete(folderId);
+          } else {
+              next.add(folderId);
+          }
+          return next;
+      });
+  }, []);
+
+  const handleConfirmDelete = () => {
+      const isHome = activeFolderId === null;
+      
+      if (isHome) {
+          // --- FOLDER DELETION LOGIC ---
+          const ids = Array.from(selectedFolderIds);
+          if (ids.length === 0) return;
+
+          // 1. Snapshot Folders + Indices
+          const foldersToRestore = state.db.folders
+            .map((f, i) => ({ folder: f, index: i }))
+            .filter(item => ids.includes(item.folder.id));
+
+          // 2. Snapshot Cards within these folders + Indices
+          const cardsToRestore = state.db.cards
+            .map((c, i) => ({ card: c, index: i }))
+            .filter(item => ids.includes(item.card.folderId));
+
+          dispatch({ type: 'DELETE_FOLDERS', payload: ids });
+
+          toast(`${ids.length} carpetas eliminadas`, 'ok', () => {
+              dispatch({ type: 'RESTORE_FOLDERS', payload: foldersToRestore });
+              // Also restore the cards that were in those folders
+              if (cardsToRestore.length > 0) {
+                  dispatch({ type: 'RESTORE_CARDS', payload: cardsToRestore });
+              }
+              toast("Carpetas restauradas");
+          });
+
+          setIsSelectionMode(false);
+          setSelectedFolderIds(new Set());
+          setShowBulkDeleteConfirm(false);
+
+      } else {
+          // --- CARD DELETION LOGIC ---
+          const ids = Array.from(selectedCardIds);
+          if (ids.length === 0) return;
+          
+          // Capture both the card AND its original index for precise restoration
+          const cardsToRestore = state.db.cards
+            .map((c, i) => ({ card: c, index: i }))
+            .filter(item => ids.includes(item.card.uid));
+          
+          dispatch({ type: 'DELETE_CARDS', payload: ids });
+          
+          toast(`${ids.length} cartas eliminadas`, 'ok', () => {
+              dispatch({ type: 'RESTORE_CARDS', payload: cardsToRestore });
+              toast("Cartas restauradas");
+          });
+
+          setIsSelectionMode(false);
+          setSelectedCardIds(new Set());
+          setShowBulkDeleteConfirm(false);
+      }
+  };
+
+  const handleSelectAll = () => {
+      const isHome = activeFolderId === null;
+
+      if (isHome) {
+          // Select all folders EXCEPT ID_ALL
+          const selectableFolders = (finalData as Folder[]).filter(f => f.id !== ID_ALL);
+          const ids = selectableFolders.map(f => f.id);
+          
+          if (selectedFolderIds.size === ids.length) {
+              setSelectedFolderIds(new Set());
+          } else {
+              setSelectedFolderIds(new Set(ids));
+          }
+
+      } else {
+          // Select all visible cards
+          const ids = (finalData as Card[]).map(c => c.uid);
+          if (selectedCardIds.size === ids.length) {
+              setSelectedCardIds(new Set());
+          } else {
+              setSelectedCardIds(new Set(ids));
+          }
+      }
+  };
+
+  const handleSelectApiCard = (card: ApiCard) => {
+      setSelectedApiCard(card);
+      setEditingCard(null);
+      setIsSearchModalOpen(false);
+      setIsCardModalOpen(true);
+  };
+
+  // --- Filtering & Sorting Pipeline ---
+  const isHome = activeFolderId === null;
+
+  // 1. BASE DATA: Initial List based on Location (Home/Folder) + Search Query
+  // This list is used to generate "Available Filters" (Sets/Rarities) so they match the current search context.
+  const baseData = useMemo(() => {
+     let list: (Folder | Card)[] = [];
+
+     if (isHome) {
+         // Folders
+         list = [...state.db.folders];
+         if (searchQuery) {
+            const q = normalizeStr(searchQuery);
+            list = (list as Folder[]).filter(f => normalizeStr(f.name).includes(q));
+         }
+         // System Folder Pinned Logic happens later during Sort
+     } else {
+         // Cards
+         list = activeFolderId === ID_ALL 
+            ? [...state.db.cards] 
+            : state.db.cards.filter(c => c.folderId === activeFolderId);
+        
+         if (searchQuery) {
+            const q = normalizeStr(searchQuery);
+            if (q.startsWith('#')) {
+                const searchTags = q.split(' ').map(t => t.trim()).filter(t => t.length > 0);
+                list = (list as Card[]).filter(c => {
+                    return searchTags.every(st => {
+                        const matchesCardTag = c.tags.some(ct => normalizeStr(ct).includes(st));
+                        const cleanSearchTag = st.replace('#', '');
+                        const folder = state.db.folders.find(f => f.id === c.folderId);
+                        const folderNameNormalized = folder ? normalizeStr(folder.name).replace(/\s+/g, '') : '';
+                        const matchesFolderTag = folderNameNormalized.includes(cleanSearchTag);
+                        return matchesCardTag || matchesFolderTag;
+                    });
+                });
+            } else {
+                list = (list as Card[]).filter(c => {
+                    const n = normalizeStr(c.name);
+                    const nEn = normalizeStr(c.name_en || '');
+                    return n.includes(q) || nEn.includes(q);
+                });
+            }
+         }
+     }
+     return list;
+  }, [state.db, isHome, activeFolderId, searchQuery]);
+
+  // 2. DERIVED OPTIONS: Extract Sets/Rarities from Base Data (only for Cards)
+  const { availableSets, availableRarities } = useMemo(() => {
+      if (isHome) return { availableSets: [], availableRarities: [] };
+      
+      const cards = baseData as Card[];
+      const sets = new Set<string>();
+      const rarities = new Set<string>();
+
+      cards.forEach(c => {
+          const prefix = getSetPrefix(c.setCode);
+          if (prefix) sets.add(prefix);
+          if (c.rarity) rarities.add(c.rarity);
+      });
+
+      return {
+          availableSets: Array.from(sets).sort(),
+          // CHANGE: Sort by Weight Descending instead of Alphabetical
+          availableRarities: Array.from(rarities).sort((a, b) => {
+              const wA = getRarityWeight(a);
+              const wB = getRarityWeight(b);
+              if (wA !== wB) return wB - wA; // Highest weight (rarest) first
+              return a.localeCompare(b);
+          })
+      };
+  }, [baseData, isHome]);
+
+  // 3. FINAL DATA: Apply Advanced Filters & Sorting
+  const finalData = useMemo(() => {
+    // Helper Identity sort
+    const compareAttributes = (a: Card, b: Card) => {
+        const setDiff = (a.setCode || '').localeCompare(b.setCode || '');
+        if (setDiff !== 0) return setDiff;
+        const imgDiff = a.img.localeCompare(b.img);
+        if (imgDiff !== 0) return imgDiff;
+        const rarityDiff = (a.rarityCode || '').localeCompare(b.rarityCode || '');
+        if (rarityDiff !== 0) return rarityDiff;
+        const condDiff = a.condition.localeCompare(b.condition);
+        if (condDiff !== 0) return condDiff;
+        const langDiff = a.lang.localeCompare(b.lang);
+        if (langDiff !== 0) return langDiff;
+        return 0;
+    };
+
+    if (isHome) {
+        // --- FOLDERS PROCESSING ---
+        let list = baseData as Folder[];
+        
+        const systemFolder = list.find(f => f.id === ID_ALL);
+        const userFolders = list.filter(f => f.id !== ID_ALL);
+
+        if (sortFolders !== 'manual') {
+            const dir = sortFoldersDir === 'asc' ? 1 : -1;
+            userFolders.sort((a, b) => {
+                if (sortFolders === 'name') return a.name.localeCompare(b.name) * dir;
+                if (sortFolders === 'value') {
+                    const valA = state.db.cards.filter(c => c.folderId === a.id).reduce((s, c) => s + c.paid, 0);
+                    const valB = state.db.cards.filter(c => c.folderId === b.id).reduce((s, c) => s + c.paid, 0);
+                    return (valB - valA) * dir;
+                }
+                return 0;
+            });
+        }
+        return systemFolder ? [systemFolder, ...userFolders] : userFolders;
+
+    } else {
+        // --- CARDS PROCESSING ---
+        let list = baseData as Card[];
+
+        // 0. FILTER: Wanted Cards
+        if (!showWantedCards) {
+            list = list.filter(c => !c.isWanted);
+        }
+
+        // A. FILTER: Types
+        if (filters.cardTypes.length > 0 || filters.monsterTypes.length > 0 || filters.properties.length > 0) {
+            list = list.filter(c => {
+                let { cardType, monsterType, property } = c;
+                if (!cardType) {
+                    const derived = analyzeCardType(c.type, '');
+                    cardType = derived.cardType;
+                    monsterType = derived.monsterType;
+                    property = derived.property;
+                }
+                // Main Type
+                if (filters.cardTypes.length > 0 && cardType) {
+                    if (!filters.cardTypes.includes(cardType)) return false;
+                }
+                // Monster Type
+                if (cardType === 'Monster' && filters.monsterTypes.length > 0) {
+                    if (!monsterType || !filters.monsterTypes.includes(monsterType)) return false;
+                }
+                // Property
+                if ((cardType === 'Spell' || cardType === 'Trap') && filters.properties.length > 0) {
+                     if (!property || !filters.properties.includes(property)) return false;
+                }
+                return true;
+            });
+        }
+
+        // B. FILTER: Sets
+        if (filters.sets.length > 0) {
+            list = list.filter(c => {
+                const prefix = getSetPrefix(c.setCode);
+                return filters.sets.includes(prefix);
+            });
+        }
+
+        // C. FILTER: Rarities
+        if (filters.rarities.length > 0) {
+            list = list.filter(c => filters.rarities.includes(c.rarity));
+        }
+
+        // D. SORTING
+        if (sortCards !== 'manual') {
+            const dir = sortCardsDir === 'asc' ? 1 : -1;
+            list.sort((a, b) => {
+                if (sortCards === 'name') {
+                    const nameDiff = a.name.localeCompare(b.name) * dir;
+                    if (nameDiff !== 0) return nameDiff;
+                    const attrDiff = compareAttributes(a, b);
+                    if (attrDiff !== 0) return attrDiff;
+                    return a.paid - b.paid;
+                }
+                if (sortCards === 'price') {
+                    const priceDiff = (b.paid - a.paid) * dir;
+                    if (priceDiff !== 0) return priceDiff;
+                    const tA = getTypeWeight(a.type);
+                    const tB = getTypeWeight(b.type);
+                    const typeDiff = (tA - tB) * dir;
+                    if (typeDiff !== 0) return typeDiff;
+                    const nameDiff = a.name.localeCompare(b.name) * dir;
+                    if (nameDiff !== 0) return nameDiff;
+                    return compareAttributes(a, b);
+                }
+                if (sortCards === 'rarity') {
+                    const wA = getRarityWeight(a.rarity);
+                    const wB = getRarityWeight(b.rarity);
+                    const rarityDiff = (wB - wA) * dir;
+                    if (rarityDiff !== 0) return rarityDiff;
+                    const nameDiff = a.name.localeCompare(b.name) * dir;
+                    if (nameDiff !== 0) return nameDiff;
+                    const attrDiff = compareAttributes(a, b);
+                    if (attrDiff !== 0) return attrDiff;
+                    return a.paid - b.paid;
+                }
+                if (sortCards === 'type') {
+                     const wA = getTypeWeight(a.type);
+                     const wB = getTypeWeight(b.type);
+                     const typeDiff = (wA - wB) * dir;
+                     if (typeDiff !== 0) return typeDiff;
+                     const nameDiff = a.name.localeCompare(b.name) * dir;
+                     if (nameDiff !== 0) return nameDiff;
+                     const attrDiff = compareAttributes(a, b);
+                     if (attrDiff !== 0) return attrDiff;
+                     return a.paid - b.paid;
+                }
+                return 0;
+            });
+        }
+        return list;
+    }
+  }, [baseData, isHome, sortFolders, sortFoldersDir, sortCards, sortCardsDir, filters, state.db.cards, showWantedCards]);
+
+  // Derived Values for Selection UI
+  const totalSelectable = isHome 
+      ? (finalData as Folder[]).filter(f => f.id !== ID_ALL).length 
+      : (finalData as Card[]).length;
+  
+  const currentSelectedCount = isHome ? selectedFolderIds.size : selectedCardIds.size;
+
+  // GRID CALCULATION FOR DISPLAY MODE
+  const displayGridStyle = useMemo(() => {
+      if (view !== 'display') return {};
+      const count = finalData.length;
+      if (count === 0) return {};
+
+      // Standard YGO ratio approx 0.68
+      // Screen ratio approx 1.77 (16:9)
+      // To fill screen, optimal cols ~= sqrt(count * (screenRatio / cardRatio))
+      // screenRatio/cardRatio ~= 2.6
+      
+      const optimalCols = Math.sqrt(count * 2.6);
+      const cols = Math.max(1, Math.round(optimalCols));
+      const rows = Math.max(1, Math.ceil(count / cols));
+
+      return { 
+          gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`,
+          gridTemplateRows: `repeat(${rows}, minmax(0, 1fr))`
+      };
+  }, [view, finalData.length]);
+
+  return (
+    <div className="min-h-screen pt-[80px] pb-24 transition-colors duration-500">
+      <Header 
+        onOpenFolderModal={() => { setEditingFolderId(null); setIsFolderModalOpen(true); }}
+        onOpenSearchModal={() => setIsSearchModalOpen(true)}
+        onImport={handleImport}
+        onOpenThemeModal={() => setIsThemeModalOpen(true)}
+        isSelectionMode={isSelectionMode}
+        onToggleSelectionMode={() => setIsSelectionMode(prev => !prev)}
+        onToggleFilter={() => setIsFilterOpen(prev => !prev)}
+        isFilterOpen={isFilterOpen}
+        activeFilterCount={activeFilterCount}
+      />
+
+      <ToastContainer />
+
+      <main className="max-w-[1600px] mx-auto px-4 sm:px-6">
+        {/* FILTERS (Only visible in Card View) */}
+        {!isHome && (
+            <CardFilter 
+                filters={filters}
+                onChange={setFilters}
+                isOpen={isFilterOpen}
+                availableSets={availableSets}
+                availableRarities={availableRarities}
+            />
+        )}
+
+         <AnimatePresence mode="wait" initial={false}>
+            {finalData.length === 0 ? (
+                <motion.div 
+                    key="empty"
+                    initial={{ opacity: 0 }} 
+                    animate={{ opacity: 1 }} 
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.15 }}
+                    className="w-full text-center py-20 text-main/50 font-medium"
+                >
+                    {searchQuery || activeFilterCount > 0 ? 'No se encontraron resultados' : 'Carpeta vacía'}
+                </motion.div>
+            ) : view === 'grid' ? (
+                <motion.div
+                    key={`grid-${activeFolderId ?? 'home'}`} 
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.15, ease: 'easeOut' }}
+                    className="grid gap-5 w-full transition-[gap] duration-300 ease-out"
+                    style={{ gridTemplateColumns: `repeat(auto-fill, minmax(var(--grid-size, ${gridSize}px), 1fr))` }}
+                >
+                    {isHome ? (
+                        (finalData as Folder[]).map((folder, idx) => (
+                            <FolderItem 
+                                key={folder.id} 
+                                folder={folder} 
+                                index={idx} 
+                                onEdit={handleFolderEdit}
+                                viewMode="grid"
+                                isSelectionMode={isSelectionMode}
+                                isSelected={selectedFolderIds.has(folder.id)}
+                                onToggleSelect={() => handleToggleSelectFolder(folder.id)}
+                            />
+                        ))
+                    ) : (
+                        (finalData as Card[]).map((card) => (
+                            <CardItem 
+                                key={card.uid} 
+                                card={card} 
+                                onPress={handleCardPress}
+                                viewMode="grid"
+                                isSelectionMode={isSelectionMode}
+                                isSelected={selectedCardIds.has(card.uid)}
+                                onToggleSelect={() => handleToggleSelectCard(card.uid)}
+                            />
+                        ))
+                    )}
+                </motion.div>
+            ) : view === 'list' ? (
+                <motion.div
+                    key={`list-${activeFolderId ?? 'home'}`}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.15, ease: 'easeOut' }}
+                    className="flex flex-col gap-3 w-full"
+                >
+                    {isHome ? (
+                        (finalData as Folder[]).map((folder, idx) => (
+                            <FolderItem 
+                                key={folder.id} 
+                                folder={folder} 
+                                index={idx} 
+                                onEdit={handleFolderEdit}
+                                viewMode="list"
+                                isSelectionMode={isSelectionMode}
+                                isSelected={selectedFolderIds.has(folder.id)}
+                                onToggleSelect={() => handleToggleSelectFolder(folder.id)}
+                            />
+                        ))
+                    ) : (
+                        (finalData as Card[]).map((card) => (
+                            <CardItem 
+                                key={card.uid} 
+                                card={card} 
+                                onPress={handleCardPress}
+                                viewMode="list"
+                                isSelectionMode={isSelectionMode}
+                                isSelected={selectedCardIds.has(card.uid)}
+                                onToggleSelect={() => handleToggleSelectCard(card.uid)}
+                            />
+                        ))
+                    )}
+                </motion.div>
+            ) : view === 'display' ? (
+                 <motion.div
+                    key={`display-${activeFolderId ?? 'home'}`} 
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.15, ease: 'easeOut' }}
+                    className="grid gap-1 w-full h-[calc(100vh-100px)] p-4"
+                    style={displayGridStyle}
+                >
+                    {isHome ? (
+                        // Fallback to Grid for Folders in Display Mode (or could render cleaner folders)
+                        (finalData as Folder[]).map((folder, idx) => (
+                            <FolderItem 
+                                key={folder.id} 
+                                folder={folder} 
+                                index={idx} 
+                                onEdit={handleFolderEdit}
+                                viewMode="grid" // Keep standard grid for folders even in display mode
+                                isSelectionMode={isSelectionMode}
+                                isSelected={selectedFolderIds.has(folder.id)}
+                                onToggleSelect={() => handleToggleSelectFolder(folder.id)}
+                            />
+                        ))
+                    ) : (
+                        (finalData as Card[]).map((card) => (
+                            <CardItem 
+                                key={card.uid} 
+                                card={card} 
+                                onPress={handleCardPress}
+                                viewMode="display" // Use new display mode
+                                isSelectionMode={isSelectionMode}
+                                isSelected={selectedCardIds.has(card.uid)}
+                                onToggleSelect={() => handleToggleSelectCard(card.uid)}
+                            />
+                        ))
+                    )}
+                </motion.div>
+            ) : (
+                <motion.div
+                    key={`album-${activeFolderId ?? 'home'}`}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.15, ease: 'easeOut' }}
+                >
+                    {isHome ? (
+                         // Fallback for Home View (Shouldn't really happen if UI logic is sound, but good safety)
+                         // Render Grid for folders even in Album mode
+                        <div 
+                            className="grid gap-5 w-full transition-[gap] duration-300 ease-out"
+                            style={{ gridTemplateColumns: `repeat(auto-fill, minmax(var(--grid-size, ${gridSize}px), 1fr))` }}
+                        >
+                             {(finalData as Folder[]).map((folder, idx) => (
+                                <FolderItem 
+                                    key={folder.id} 
+                                    folder={folder} 
+                                    index={idx} 
+                                    onEdit={handleFolderEdit}
+                                    viewMode="grid"
+                                    isSelectionMode={isSelectionMode}
+                                    isSelected={selectedFolderIds.has(folder.id)}
+                                    onToggleSelect={() => handleToggleSelectFolder(folder.id)}
+                                />
+                            ))}
+                        </div>
+                    ) : (
+                        <AlbumView 
+                            cards={finalData as Card[]}
+                            onCardPress={handleCardPress}
+                            isSelectionMode={isSelectionMode}
+                            selectedIds={selectedCardIds}
+                            onToggleSelect={handleToggleSelectCard}
+                        />
+                    )}
+                </motion.div>
+            )}
+        </AnimatePresence>
+      </main>
+
+      {/* FLOATING ACTION BAR FOR SELECTION */}
+      <AnimatePresence>
+        {isSelectionMode && (
+            <motion.div 
+                initial={{ y: 100 }}
+                animate={{ y: 0 }}
+                exit={{ y: 100 }}
+                className="fixed bottom-6 left-0 right-0 flex justify-center z-50 pointer-events-none"
+            >
+                <div className="bg-bg-panel border-none shadow-2xl rounded-2xl flex items-center gap-4 p-2 pointer-events-auto overflow-hidden ring-1 ring-white/5">
+                    {showBulkDeleteConfirm ? (
+                        <motion.div 
+                            initial={{ opacity: 0, x: 20 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            className="flex items-center gap-3 px-2"
+                        >
+                            <span className="text-sm font-bold text-main">
+                                ¿Eliminar {currentSelectedCount} {isHome ? 'carpetas' : 'cartas'}?
+                            </span>
+                            <button 
+                                onClick={() => setShowBulkDeleteConfirm(false)}
+                                className="px-3 py-1.5 rounded-lg bg-bg-surface hover:bg-main/10 text-main text-xs font-bold transition-colors"
+                            >
+                                Cancelar
+                            </button>
+                            <button 
+                                onClick={handleConfirmDelete}
+                                className="px-3 py-1.5 rounded-lg bg-red-600 hover:bg-red-500 text-white text-xs font-bold transition-colors shadow-lg shadow-red-900/20"
+                            >
+                                Sí, eliminar
+                            </button>
+                        </motion.div>
+                    ) : (
+                        <>
+                            <div className="px-4 text-sm font-bold text-main">
+                                {currentSelectedCount} seleccionadas
+                            </div>
+                            
+                            <button 
+                                onClick={handleSelectAll}
+                                className="px-4 py-2 hover:bg-primary/20 hover:text-primary rounded-lg text-sm font-medium transition-colors text-main/80"
+                            >
+                                {currentSelectedCount === totalSelectable ? 'Deseleccionar' : 'Todas'}
+                            </button>
+
+                            <div className="w-[1px] h-6 bg-main/10" />
+
+                            <button 
+                                onClick={() => { 
+                                    setIsSelectionMode(false); 
+                                    setSelectedCardIds(new Set()); 
+                                    setSelectedFolderIds(new Set());
+                                    setShowBulkDeleteConfirm(false); 
+                                }}
+                                className="p-2 hover:bg-main/10 rounded-lg text-main/60 hover:text-main transition-colors"
+                                title="Cancelar"
+                            >
+                                <X size={20} />
+                            </button>
+                            
+                            <button 
+                                onClick={() => setShowBulkDeleteConfirm(true)}
+                                disabled={currentSelectedCount === 0}
+                                className="p-2 bg-red-600 hover:bg-red-500 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg transition-colors shadow-lg shadow-red-900/20"
+                                title="Eliminar"
+                            >
+                                <Trash size={20} />
+                            </button>
+                        </>
+                    )}
+                </div>
+            </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {isThemeModalOpen && (
+            <ThemeModal isOpen={isThemeModalOpen} onClose={() => setIsThemeModalOpen(false)} />
+        )}
+        {isFolderModalOpen && (
+            <FolderModal 
+                isOpen={isFolderModalOpen} 
+                onClose={() => setIsFolderModalOpen(false)} 
+                editId={editingFolderId} 
+                onSave={(newId) => setLastCreatedFolderId(newId)}
+            />
+        )}
+        {isSearchModalOpen && (
+            <SearchModal 
+                isOpen={isSearchModalOpen}
+                onClose={() => setIsSearchModalOpen(false)}
+                onSelect={handleSelectApiCard}
+            />
+        )}
+        {isCardModalOpen && (
+            <CardModal 
+                isOpen={isCardModalOpen}
+                onClose={() => {
+                    setIsCardModalOpen(false);
+                    setLastCreatedFolderId(null); // Clear persistent new folder ID to respect active folder on next open
+                }}
+                initialApiCard={selectedApiCard}
+                existingCard={editingCard}
+                onCreateFolder={() => {
+                    setEditingFolderId(null);
+                    setIsFolderModalOpen(true);
+                }}
+                newFolderId={lastCreatedFolderId}
+            />
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+export default App;
