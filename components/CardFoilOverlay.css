@@ -94,6 +94,22 @@
     transparent 74% 100%
   );
 
+  /*
+   * Iridiscencia de fondo. Va SIEMPRE visible, sin animar: una carta con foil
+   * se ve con foil aunque esté quieta, y sin esto el efecto solo existía
+   * durante el barrido. Se mezcla en `overlay`, que añade color sin aplanar la
+   * ilustración como haría `color-dodge`.
+   */
+  --iris-estatico: linear-gradient(
+    122deg,
+    rgba(255, 80, 120, 0.5) 0%,
+    rgba(255, 200, 90, 0.5) 20%,
+    rgba(120, 255, 170, 0.5) 40%,
+    rgba(90, 200, 255, 0.5) 60%,
+    rgba(180, 120, 255, 0.5) 80%,
+    rgba(255, 90, 190, 0.5) 100%
+  );
+
   /* --- Tramas fijas --- */
 
   --tex-puntos: radial-gradient(circle, rgba(255, 255, 255, 0.85) 0 32%, transparent 34%);
@@ -281,32 +297,32 @@
 
 /* Super y Ultra: holograma de trama de puntos muy fina. */
 .foil-art--holo {
-  --tex: var(--tex-puntos);
-  --tex-size: 1.5% 1.05%;
-  --tex-blend: color-dodge;
-  --tex-alpha: 0.16;
+  --tex: var(--tex-puntos), var(--iris-estatico);
+  --tex-size: 1.5% 1.05%, 100% 100%;
+  --tex-blend: overlay;
+  --tex-alpha: 0.55;
   --band: var(--banda-arcoiris);
-  --band-alpha: 0.2;
+  --band-alpha: 0.5;
 }
 
 /* Secret: diagonales finísimas, que al inclinar cortan la luz como un cristal. */
 .foil-art--diagonal {
-  --tex: var(--tex-diagonal);
-  --tex-size: 100% 100%;
-  --tex-blend: color-dodge;
-  --tex-alpha: 0.2;
+  --tex: var(--tex-diagonal), var(--iris-estatico);
+  --tex-size: 100% 100%, 100% 100%;
+  --tex-blend: overlay;
+  --tex-alpha: 0.7;
   --band: var(--banda-arcoiris);
-  --band-alpha: 0.24;
+  --band-alpha: 0.55;
 }
 
 /* Prismatic: misma familia, pero la trama va en horizontal y vertical. */
 .foil-art--grid {
-  --tex: var(--tex-rejilla);
-  --tex-size: 100% 100%, 100% 100%;
-  --tex-blend: color-dodge;
-  --tex-alpha: 0.18;
+  --tex: var(--tex-rejilla), var(--iris-estatico);
+  --tex-size: 100% 100%, 100% 100%, 100% 100%;
+  --tex-blend: overlay;
+  --tex-alpha: 0.7;
   --band: var(--banda-arcoiris);
-  --band-alpha: 0.24;
+  --band-alpha: 0.55;
 }
 
 /* Ultimate: la única rareza que se nota con el dedo. Relieve, sin diagonales. */
@@ -314,9 +330,9 @@
   --tex: var(--tex-relieve);
   --tex-size: 100% 100%;
   --tex-blend: overlay;
-  --tex-alpha: 0.55;
+  --tex-alpha: 0.85;
   --band: var(--banda-oro);
-  --band-alpha: 0.35;
+  --band-alpha: 0.5;
   --band-blend: overlay;
 }
 
@@ -330,9 +346,9 @@
   );
   --tex-size: 100% 100%;
   --tex-blend: screen;
-  --tex-alpha: 0.45;
+  --tex-alpha: 0.6;
   --band: var(--banda-arcoiris);
-  --band-alpha: 0.3;
+  --band-alpha: 0.45;
   --band-blend: screen;
 }
 
@@ -352,30 +368,30 @@
     rgba(255, 90, 200, 0.7)
   );
   --tex-size: 150% 150%;
-  --tex-blend: color-dodge;
-  --tex-alpha: 0.22;
+  --tex-blend: overlay;
+  --tex-alpha: 0.6;
   --band: var(--banda-plata);
-  --band-alpha: 0.2;
+  --band-alpha: 0.4;
 }
 
 .foil-art--gold {
   --tex: var(--tex-diagonal);
   --tex-size: 100% 100%;
   --tex-blend: overlay;
-  --tex-alpha: 0.22;
+  --tex-alpha: 0.55;
   --band: var(--banda-oro);
-  --band-alpha: 0.45;
+  --band-alpha: 0.6;
   --band-blend: overlay;
 }
 
 /* Pharaoh's Rare: una Ultra con jeroglíficos diminutos dentro del foil. */
 .foil-art--hieroglyph {
-  --tex: var(--tex-hieroglifos);
-  --tex-size: 11% auto;
-  --tex-blend: color-dodge;
-  --tex-alpha: 0.28;
+  --tex: var(--tex-hieroglifos), var(--iris-estatico);
+  --tex-size: 11% auto, 100% 100%;
+  --tex-blend: overlay;
+  --tex-alpha: 0.6;
   --band: var(--banda-oro);
-  --band-alpha: 0.4;
+  --band-alpha: 0.55;
 }
 
 /* =========================================================================
@@ -385,76 +401,100 @@
 .foil-card--parallel {
   --tex: var(--tex-paralelo);
   --tex-size: 100% 100%;
-  --tex-blend: soft-light;
-  --tex-alpha: 0.45;
+  --tex-blend: overlay;
+  --tex-alpha: 0.6;
   --band: var(--banda-plata);
-  --band-alpha: 0.22;
-  --band-blend: soft-light;
+  --band-alpha: 0.4;
+  --band-blend: overlay;
 }
 
 .foil-card--starlight {
-  --tex: var(--tex-horizontal);
-  --tex-size: 100% 100%;
-  --tex-blend: color-dodge;
-  --tex-alpha: 0.22;
+  --tex: var(--tex-horizontal), var(--iris-estatico);
+  --tex-size: 100% 100%, 100% 100%;
+  --tex-blend: overlay;
+  --tex-alpha: 0.42;
   --band: var(--banda-arcoiris);
-  --band-alpha: 0.26;
+  --band-alpha: 0.38;
 }
 
 .foil-card--platinum {
   --tex: var(--tex-cristal);
   --tex-size: 38% auto;
   --tex-blend: overlay;
-  --tex-alpha: 0.3;
+  --tex-alpha: 0.6;
   --band: var(--banda-platino);
-  --band-alpha: 0.28;
+  --band-alpha: 0.5;
   --band-blend: overlay;
 }
 
 .foil-card--qcr {
-  --tex: var(--tex-paralelo);
-  --tex-size: 100% 100%;
-  --tex-blend: color-dodge;
-  --tex-alpha: 0.18;
+  --tex: var(--tex-paralelo), var(--iris-estatico);
+  --tex-size: 100% 100%, 100% 100%;
+  --tex-blend: overlay;
+  --tex-alpha: 0.45;
   --band: var(--banda-arcoiris);
-  --band-alpha: 0.3;
+  --band-alpha: 0.4;
 }
 
 .foil-card--stars {
   --tex: var(--tex-estrellas);
   --tex-size: 15% auto;
-  --tex-blend: soft-light;
-  --tex-alpha: 0.6;
+  --tex-blend: overlay;
+  --tex-alpha: 0.8;
   --band: var(--banda-plata);
-  --band-alpha: 0.2;
-  --band-blend: soft-light;
+  --band-alpha: 0.35;
+  --band-blend: overlay;
 }
 
 .foil-card--mosaic {
   --tex: var(--tex-mosaico);
   --tex-size: 3.2% 2.2%;
-  --tex-blend: soft-light;
-  --tex-alpha: 0.5;
+  --tex-blend: overlay;
+  --tex-alpha: 0.7;
   --band: var(--banda-plata);
-  --band-alpha: 0.2;
-  --band-blend: soft-light;
+  --band-alpha: 0.35;
+  --band-blend: overlay;
 }
 
 .foil-card--shatter {
   --tex: var(--tex-cristal);
   --tex-size: 40% auto;
-  --tex-blend: soft-light;
-  --tex-alpha: 0.6;
+  --tex-blend: overlay;
+  --tex-alpha: 0.85;
   --band: var(--banda-plata);
-  --band-alpha: 0.22;
-  --band-blend: soft-light;
+  --band-alpha: 0.35;
+  --band-blend: overlay;
 }
 
 .foil-card--gold {
-  --tex: none;
+  --tex: var(--banda-oro);
+  --tex-size: 100% 100%;
+  --tex-blend: overlay;
+  --tex-alpha: 0.4;
   --band: var(--banda-oro);
-  --band-alpha: 0.3;
-  --band-blend: soft-light;
+  --band-alpha: 0.5;
+  --band-blend: overlay;
+}
+
+/*
+ * Grand Master Rare: arco iris sobre atributo, nivel y borde del cuadro de
+ * texto, más una cenefa de jeroglíficos recorriendo el canto de la carta. Los
+ * jeroglíficos se repiten solo por los cuatro bordes, de ahí las cuatro capas
+ * con `repeat-x` y `repeat-y` ancladas a cada lado.
+ */
+.foil-card--grandmaster {
+  --tex: var(--tex-hieroglifos), var(--tex-hieroglifos), var(--tex-hieroglifos),
+    var(--tex-hieroglifos), var(--iris-estatico);
+  --tex-size: auto 5%, auto 5%, 4% auto, 4% auto, 100% 100%;
+  --tex-blend: overlay;
+  --tex-alpha: 0.5;
+  --band: var(--banda-arcoiris);
+  --band-alpha: 0.4;
+}
+
+.foil-card--grandmaster::before {
+  background-repeat: repeat-x, repeat-x, repeat-y, repeat-y, no-repeat;
+  background-position: top center, bottom center, left center, right center, center;
 }
 
 /* =========================================================================

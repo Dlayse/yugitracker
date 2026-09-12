@@ -14,31 +14,69 @@ import './index.css';
  * copia, así que lo que se ve aquí es exactamente lo que se ve en la app.
  */
 
-const RAREZAS = [
-  'Common',
-  'Short Print',
-  'Rare',
-  'Super Rare',
-  'Ultra Rare',
-  'Secret Rare',
-  'Prismatic Secret Rare',
-  'Platinum Secret Rare',
-  'Ultimate Rare',
-  'Ghost Rare',
-  "Collector's Rare",
-  'Starlight Rare',
-  'Quarter Century Secret Rare',
-  '10000 Secret Rare',
-  "Pharaoh's Rare",
-  'Gold Rare',
-  'Premium Gold Rare',
-  'Gold Secret Rare',
-  'Parallel Rare',
-  'Ultra Parallel Rare',
-  'Duel Terminal Rare Parallel Rare',
-  'Starfoil Rare',
-  'Mosaic Rare',
-  'Shatterfoil Rare',
+/*
+ * Todas las rarezas que YGOPRODeck usa de verdad: salen de recorrer unas 13.000
+ * cartas y quedarse con las cadenas distintas de `set_rarity`. Al final van
+ * unas cuantas que NO son rarezas sino notas de edición que ensucian ese mismo
+ * campo; deben salir sin brillo ninguno.
+ */
+const GRUPOS: { titulo: string; rarezas: string[] }[] = [
+  {
+    titulo: 'Sin foil',
+    rarezas: ['Common', 'Short Print', 'Super Short Print', 'Normal Rare'],
+  },
+  {
+    titulo: 'Escalera clásica',
+    rarezas: ['Rare', 'Super Rare', 'Ultra Rare', 'Secret Rare', 'Ultimate Rare'],
+  },
+  {
+    titulo: 'Familia Secret',
+    rarezas: [
+      'Ultra Secret Rare',
+      'Extra Secret Rare',
+      'Prismatic Secret Rare',
+      'Platinum Secret Rare',
+      'Platinum Rare',
+      'Millennium Rare',
+    ],
+  },
+  {
+    titulo: 'Premium y aniversario',
+    rarezas: [
+      'Ghost Rare',
+      'Ghost/Gold Rare',
+      "Collector's Rare",
+      'Starlight Rare',
+      'Quarter Century Secret Rare',
+      '10000 Secret Rare',
+      'Grand Master Rare',
+      "Ultra Rare (Pharaoh's Rare)",
+    ],
+  },
+  {
+    titulo: 'Serie dorada',
+    rarezas: ['Gold Rare', 'Gold Secret Rare', 'Premium Gold Rare'],
+  },
+  {
+    titulo: 'Tramas sobre toda la carta',
+    rarezas: ['Starfoil Rare', 'Mosaic Rare', 'Shatterfoil Rare'],
+  },
+  {
+    titulo: 'Parallel y Duel Terminal',
+    rarezas: [
+      'Normal Parallel Rare',
+      'Super Parallel Rare',
+      'Ultra Parallel Rare',
+      'Duel Terminal Normal Parallel Rare',
+      'Duel Terminal Rare Parallel Rare',
+      'Duel Terminal Super Parallel Rare',
+      'Duel Terminal Ultra Parallel Rare',
+    ],
+  },
+  {
+    titulo: 'No son rarezas (deben salir limpias)',
+    rarezas: ['New', 'Reprint', 'New artwork', '2', 'European debut'],
+  },
 ];
 
 const CARTAS: Record<string, string> = {
@@ -51,9 +89,19 @@ function Demo() {
   const [carta, setCarta] = useState<string>('Dark Magician');
   const [ancho, setAncho] = useState(220);
   const [zonas, setZonas] = useState(false);
+  const [quieto, setQuieto] = useState(false);
 
   return (
     <div className="min-h-screen p-6 text-main">
+      {/*
+        Congelar el barrido sirve para juzgar el estado EN REPOSO, que es como
+        se ve la carta la mayor parte del tiempo. Si con esto activado no se
+        aprecia el foil, es que la trama fija se ha quedado corta.
+      */}
+      {quieto && (
+        <style>{`.foil-zone::after { animation: none !important; background-position: 45% 50% !important; }`}</style>
+      )}
+
       <header className="mb-6 flex flex-wrap items-end gap-6">
         <div>
           <h1 className="text-2xl font-bold">Brillos por rareza</h1>
@@ -91,34 +139,55 @@ function Demo() {
           <input type="checkbox" checked={zonas} onChange={(e) => setZonas(e.target.checked)} />
           Marcar las zonas medidas
         </label>
+
+        <label className="flex items-center gap-2 text-xs text-muted">
+          <input type="checkbox" checked={quieto} onChange={(e) => setQuieto(e.target.checked)} />
+          Congelar el barrido
+        </label>
       </header>
 
-      <div className="grid gap-6" style={{ gridTemplateColumns: `repeat(auto-fill, minmax(${ancho}px, 1fr))` }}>
-        {RAREZAS.map((rareza) => (
-          <figure key={rareza} className="flex flex-col gap-2">
-            <div
-              className="card-container relative w-full aspect-[421/614] rounded-lg overflow-hidden bg-black"
-              style={{ containerType: 'inline-size' }}
-            >
-              <img src={CARTAS[carta]} alt="" className="absolute inset-0 w-full h-full object-cover" />
-              <CardFoilOverlay rarity={rareza} />
-              {zonas && (
-                <>
-                  <div
-                    className="absolute border border-dashed border-cyan-400/80 z-[30]"
-                    style={{ top: '17.2%', right: '11.5%', bottom: '29.4%', left: '10.4%' }}
+      {GRUPOS.map((grupo) => (
+        <section key={grupo.titulo} className="mb-10">
+          <h2 className="text-sm font-bold uppercase tracking-wider text-primary mb-3">
+            {grupo.titulo}
+          </h2>
+          <div
+            className="grid gap-6"
+            style={{ gridTemplateColumns: `repeat(auto-fill, minmax(${ancho}px, 1fr))` }}
+          >
+            {grupo.rarezas.map((rareza) => (
+              <figure key={rareza} className="flex flex-col gap-2">
+                <div
+                  className="card-container relative w-full aspect-[421/614] rounded-lg overflow-hidden bg-black"
+                  style={{ containerType: 'inline-size' }}
+                >
+                  <img
+                    src={CARTAS[carta]}
+                    alt=""
+                    className="absolute inset-0 w-full h-full object-cover"
                   />
-                  <div
-                    className="absolute border border-dashed border-pink-400/80 z-[30]"
-                    style={{ top: '5.4%', right: '20%', bottom: '89.5%', left: '5.8%' }}
-                  />
-                </>
-              )}
-            </div>
-            <figcaption className="text-xs font-medium text-muted text-center leading-tight">{rareza}</figcaption>
-          </figure>
-        ))}
-      </div>
+                  <CardFoilOverlay rarity={rareza} />
+                  {zonas && (
+                    <>
+                      <div
+                        className="absolute border border-dashed border-cyan-400/80 z-[30]"
+                        style={{ top: '17.2%', right: '11.5%', bottom: '29.4%', left: '10.4%' }}
+                      />
+                      <div
+                        className="absolute border border-dashed border-pink-400/80 z-[30]"
+                        style={{ top: '5.4%', right: '20%', bottom: '89.5%', left: '5.8%' }}
+                      />
+                    </>
+                  )}
+                </div>
+                <figcaption className="text-xs font-medium text-muted text-center leading-tight">
+                  {rareza}
+                </figcaption>
+              </figure>
+            ))}
+          </div>
+        </section>
+      ))}
     </div>
   );
 }
