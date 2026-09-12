@@ -118,16 +118,37 @@
    Las variables las escribe el hook useCardPointer sobre el contenedor.
    ========================================================================= */
 
-.card-container {
-  /* `perspective()` dentro del propio transform evita tener que ponerla en
-     cada contenedor padre, que son distintos en cada vista. */
-  transform: perspective(650px) rotateY(var(--rotate-x, 0deg)) rotateX(var(--rotate-y, 0deg));
-  transform-style: preserve-3d;
-  transition: transform 0.4s cubic-bezier(0.23, 1, 0.32, 1);
+/*
+ * Se inclinan LA IMAGEN Y EL FOIL, no el contenedor.
+ *
+ * Dentro del contenedor viven también las insignias (1.ª edición, estado) y la
+ * barra de color de la rareza, que son interfaz de la aplicación y no parte de
+ * la carta: si se inclinan con ella parece que estén pegadas al cartón, y
+ * cantaba. Al dejarlas fuera del giro se quedan quietas, como una etiqueta
+ * puesta encima.
+ *
+ * `perspective()` va dentro del propio transform para no tener que declararla
+ * en cada contenedor padre, que son distintos en cada vista. El `scale` cubre
+ * los pocos píxeles que el giro deja al descubierto en los bordes, ya que el
+ * contenedor recorta.
+ */
+.card-container > img,
+.card-container > .foil {
+  transform: perspective(650px) rotateY(var(--rotate-x, 0deg)) rotateX(var(--rotate-y, 0deg))
+    scale(var(--tilt-scale, 1));
+  transition: transform 0.5s cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+.card-container:hover > img,
+.card-container:hover > .foil {
+  --tilt-scale: 1.03;
+  /* Casi sin transición mientras se mueve: si no, la carta va por detrás de la mano. */
+  transition-duration: 0.08s;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .card-container {
+  .card-container > img,
+  .card-container > .foil {
     transform: none;
   }
 }
