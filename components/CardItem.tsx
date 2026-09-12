@@ -6,6 +6,7 @@ import { formatMoney, getConditionMeta, getRarityColor, ID_ALL, onCardImageError
 import { motion, AnimatePresence } from 'framer-motion';
 import { MessageSquareText, FolderOpen, CheckCircle2, Circle } from 'lucide-react';
 import CardFoilOverlay from './CardFoilOverlay';
+import { useCardPointer } from './useCardPointer';
 
 interface Props {
   card: Card;
@@ -23,6 +24,12 @@ export const CardItem: React.FC<Props> = React.memo(({ card, onPress, viewMode, 
   const [obsTooltipPos, setObsTooltipPos] = useState<{ left: number; top: number } | null>(null);
   
   const cardRef = useRef<HTMLDivElement>(null);
+  /*
+   * Inclinación y reflejo. Va en el contenedor y no en el overlay porque las
+   * Common no pintan overlay y también deben inclinarse. Solo se monta una de
+   * las cuatro vistas a la vez, así que un único ref vale para todas.
+   */
+  const contenedorRef = useCardPointer(!isSelectionMode);
 
   const rarityColor = getRarityColor(card.rarity);
   const conditionMeta = getConditionMeta(card.condition);
@@ -144,7 +151,7 @@ export const CardItem: React.FC<Props> = React.memo(({ card, onPress, viewMode, 
                 : 'border-transparent hover:border-white/20 hover:shadow-xl'
             }`}
           >
-              <div className="card-container relative w-full h-full bg-[#111]">
+              <div ref={contenedorRef} className="card-container relative w-full h-full bg-[#111]">
                    {isSelectionMode && <SelectionOverlay />}
                    
                    <img 
@@ -188,7 +195,7 @@ export const CardItem: React.FC<Props> = React.memo(({ card, onPress, viewMode, 
             {isSelectionMode && <SelectionOverlay />}
 
             {/* CARD IMAGE */}
-            <div className="card-container w-full h-full bg-[#111] relative">
+            <div ref={contenedorRef} className="card-container w-full h-full bg-[#111] relative">
                  <img 
                     src={card.img}
                         onError={onCardImageError} 
@@ -292,6 +299,7 @@ export const CardItem: React.FC<Props> = React.memo(({ card, onPress, viewMode, 
                 )}
 
                 <div 
+                    ref={contenedorRef}
                     className="card-container relative h-full aspect-[421/614] mx-auto rounded-lg bg-zinc-900 overflow-hidden shadow-lg shrink-0 z-30"
                     onMouseEnter={handleMouseEnter}
                     onMouseLeave={() => setHoverPos(null)}
@@ -433,7 +441,7 @@ export const CardItem: React.FC<Props> = React.memo(({ card, onPress, viewMode, 
                 : 'border-border-base hover:shadow-[0_0_20px_rgba(var(--rgb-primary),0.15)] hover:border-primary/40'
         }`}
         >
-            <div className="card-container relative w-full aspect-[421/614] bg-[#111] overflow-hidden shrink-0">
+            <div ref={contenedorRef} className="card-container relative w-full aspect-[421/614] bg-[#111] overflow-hidden shrink-0">
                 {/* SELECTION OVERLAY */}
                 {isSelectionMode && <SelectionOverlay />}
 

@@ -2,38 +2,50 @@
  * Brillos de foil por rareza.
  *
  * ---------------------------------------------------------------------------
- * CÓMO ESTÁ MONTADO
+ * DE DÓNDE SALE LA TÉCNICA
  * ---------------------------------------------------------------------------
- * Cada rareza se describe con variables, no con reglas sueltas. Una zona solo
- * declara QUÉ textura lleva y QUÉ banda de luz la recorre; de pintarlas se
- * encargan dos reglas genéricas (`::before` y `::after`). Añadir una rareza es
- * escribir cuatro variables, no copiar un bloque entero.
+ * Es la que usan los efectos holográficos de cartas hechos en CSS (el referente
+ * conocido es pokemon-cards-css, de Simon Gellner). Tres ideas, y las tres
+ * importan:
  *
- *   --tex / --tex-size / --tex-blend / --tex-alpha    trama fija de la carta
- *   --band / --band-blend / --band-alpha              reflejo que barre
+ * 1. LA LUZ LA MANDA EL PUNTERO, NO UN RELOJ. El degradado se dibuja sobre un
+ *    lienzo del 400 % y su `background-position` se calcula desde la posición
+ *    del cursor, con un multiplicador que lo desplaza en sentido contrario y
+ *    más rápido. Eso es lo que hace creer que la luz recorre la carta al
+ *    girarla. Un barrido por temporizador se lee como un "cargando", no como
+ *    un foil: fue el error de la versión anterior.
+ *
+ * 2. CONTRASTE ALTO. Un `filter: contrast(2.4)` sobre la capa de brillo es lo
+ *    que convierte un degradado blando en bandas nítidas de metal. Sin esto
+ *    todo queda en una veladura sucia por mucho que se toquen las opacidades.
+ *
+ * 3. MICROLÍNEAS MEZCLADAS CON EL ARCO IRIS. El foil real tiene un rayado muy
+ *    fino. Va como segunda capa de fondo y se une al arco iris con
+ *    `background-blend-mode`, no como una capa aparte.
+ *
+ * Encima va un reflejo especular (`.foil-glare`) centrado en el cursor, en
+ * `overlay`: el destello que se mueve con la mano.
  *
  * ---------------------------------------------------------------------------
- * DOS COSAS QUE HAY QUE RESPETAR
+ * LO QUE APORTA ESTA APLICACIÓN: LAS ZONAS
  * ---------------------------------------------------------------------------
- * 1. NADA DE `z-index` NI `opacity` en los contenedores. Cualquiera de los dos
- *    crea un contexto de apilamiento, que aísla la mezcla: los `mix-blend-mode`
- *    dejan de ver la imagen de la carta y el efecto degenera en un velo de
- *    color que apaga la ilustración. La opacidad se aplica solo en las capas
- *    hoja (`::before` / `::after`), que son las que mezclan.
- *
- * 2. LAS BANDAS SON CASI TRANSPARENTES. Un foil no tiñe la carta: añade luz
- *    encima. Por eso los degradados son transparentes salvo en una franja
- *    estrecha que se desplaza, igual que el reflejo al girar la carta.
+ * En Yu-Gi-Oh la rareza se reconoce por QUÉ parte de la carta lleva foil: la
+ * Rare solo el nombre, la Super Rare solo la ilustración, la Parallel toda la
+ * superficie. Las coordenadas están medidas sobre las imágenes reales de
+ * YGOPRODeck (813x1185) analizando los bordes del marco, y coinciden en
+ * monstruo, mágica y trampa. El recuadro del arte es cuadrado, 639x633 px.
  *
  * ---------------------------------------------------------------------------
- * GEOMETRÍA
+ * TRAMPA CONOCIDA
  * ---------------------------------------------------------------------------
- * Las zonas están medidas sobre las imágenes reales de YGOPRODeck (813x1185) y
- * coinciden en monstruo, mágica y trampa. El recuadro de la ilustración es
- * cuadrado (639x633 px), como en la carta física.
+ * NADA DE `z-index` NI `opacity` EN LOS CONTENEDORES. Cualquiera de los dos
+ * crea un contexto de apilamiento, que aísla la mezcla: los `mix-blend-mode`
+ * dejan de ver la imagen de la carta y el efecto degenera en un velo de color
+ * que apaga la ilustración. La opacidad va siempre en las capas hoja.
  */
 
 :root {
+  /* --- Geometría de la plantilla, en % del alto/ancho --- */
   --zona-nombre-top: 5.4%;
   --zona-nombre-bottom: 89.5%;
   --zona-nombre-left: 5.8%;
@@ -44,134 +56,86 @@
   --zona-arte-left: 10.4%;
   --zona-arte-right: 11.5%;
 
-  --foil-vel: 7s;
-  --foil-vel-activa: 3.5s;
+  /* --- Los seis tonos del arco iris de foil --- */
+  --sp-1: hsl(2, 100%, 73%);
+  --sp-2: hsl(53, 100%, 69%);
+  --sp-3: hsl(93, 100%, 69%);
+  --sp-4: hsl(176, 100%, 76%);
+  --sp-5: hsl(228, 100%, 74%);
+  --sp-6: hsl(283, 100%, 73%);
 
-  /* --- Bandas de luz. Transparentes salvo la franja central. --- */
+  --oro-1: hsl(42, 95%, 52%);
+  --oro-2: hsl(48, 100%, 82%);
+  --oro-3: hsl(36, 80%, 44%);
+  --oro-4: hsl(50, 100%, 93%);
 
-  --banda-arcoiris: linear-gradient(
-    108deg,
-    transparent 0 28%,
-    rgba(255, 70, 90, 0.55) 34%,
-    rgba(255, 205, 70, 0.55) 40%,
-    rgba(120, 255, 150, 0.55) 46%,
-    rgba(70, 215, 255, 0.55) 52%,
-    rgba(165, 120, 255, 0.55) 58%,
-    rgba(255, 95, 205, 0.55) 64%,
-    transparent 70% 100%
+  --pla-1: hsl(210, 15%, 55%);
+  --pla-2: hsl(205, 25%, 92%);
+  --pla-3: hsl(210, 12%, 42%);
+  --pla-4: hsl(0, 0%, 100%);
+
+  /* --- Patrones. Se dibujan sobre un lienzo del 400 %. --- */
+  --patron-arcoiris: repeating-linear-gradient(
+    112deg,
+    var(--sp-6), var(--sp-5), var(--sp-4), var(--sp-3), var(--sp-2), var(--sp-1),
+    var(--sp-6), var(--sp-5), var(--sp-4), var(--sp-3), var(--sp-2), var(--sp-1)
   );
 
-  --banda-oro: linear-gradient(
-    108deg,
-    transparent 0 30%,
-    rgba(196, 148, 48, 0.45) 38%,
-    rgba(255, 232, 158, 0.9) 46%,
-    rgba(255, 250, 225, 1) 50%,
-    rgba(255, 232, 158, 0.9) 54%,
-    rgba(196, 148, 48, 0.45) 62%,
-    transparent 70% 100%
+  --patron-oro: repeating-linear-gradient(
+    112deg,
+    var(--oro-3), var(--oro-1), var(--oro-4), var(--oro-2), var(--oro-1), var(--oro-3),
+    var(--oro-3), var(--oro-1), var(--oro-4), var(--oro-2), var(--oro-1), var(--oro-3)
   );
 
-  --banda-plata: linear-gradient(
-    108deg,
-    transparent 0 30%,
-    rgba(150, 160, 175, 0.45) 38%,
-    rgba(232, 240, 250, 0.9) 46%,
-    rgba(255, 255, 255, 1) 50%,
-    rgba(232, 240, 250, 0.9) 54%,
-    rgba(150, 160, 175, 0.45) 62%,
-    transparent 70% 100%
-  );
-
-  --banda-platino: linear-gradient(
-    108deg,
-    transparent 0 26%,
-    rgba(140, 170, 200, 0.4) 36%,
-    rgba(225, 240, 255, 0.95) 46%,
-    rgba(255, 255, 255, 1) 50%,
-    rgba(210, 230, 250, 0.9) 56%,
-    rgba(130, 160, 195, 0.4) 66%,
-    transparent 74% 100%
+  --patron-plata: repeating-linear-gradient(
+    112deg,
+    var(--pla-3), var(--pla-1), var(--pla-4), var(--pla-2), var(--pla-1), var(--pla-3),
+    var(--pla-3), var(--pla-1), var(--pla-4), var(--pla-2), var(--pla-1), var(--pla-3)
   );
 
   /*
-   * Iridiscencia de fondo. Va SIEMPRE visible, sin animar: una carta con foil
-   * se ve con foil aunque esté quieta, y sin esto el efecto solo existía
-   * durante el barrido. Se mezcla en `overlay`, que añade color sin aplanar la
-   * ilustración como haría `color-dodge`.
+   * Microlíneas: el rayado del foil real, claro y oscuro alternando cada pocos
+   * píxeles. Al mezclarse con el arco iris en `overlay` y pasar por el filtro
+   * de contraste es lo que da la sensación de superficie metálica.
    */
-  --iris-estatico: linear-gradient(
-    122deg,
-    rgba(255, 80, 120, 0.5) 0%,
-    rgba(255, 200, 90, 0.5) 20%,
-    rgba(120, 255, 170, 0.5) 40%,
-    rgba(90, 200, 255, 0.5) 60%,
-    rgba(180, 120, 255, 0.5) 80%,
-    rgba(255, 90, 190, 0.5) 100%
-  );
+  --lineas-diagonal: repeating-linear-gradient(-58deg, #0a0a0a 0 1px, #8a8a8a 1px 2px, #0a0a0a 2px 3.5px);
+  --lineas-vertical: repeating-linear-gradient(90deg, #0a0a0a 0 1px, #8a8a8a 1px 2px, #0a0a0a 2px 3.5px);
+  --lineas-horizontal: repeating-linear-gradient(0deg, #0a0a0a 0 1px, #909090 1px 2px, #0a0a0a 2px 3.5px);
+  --lineas-rejilla: repeating-conic-gradient(#0f0f0f 0% 25%, #8a8a8a 0% 50%);
+  --lineas-punto: radial-gradient(circle, #9a9a9a 0 40%, #0a0a0a 42%);
 
-  /* --- Tramas fijas --- */
+  --lineas-estrella: url("data:image/svg+xml,%3Csvg width='42' height='42' viewBox='0 0 42 42' xmlns='http://www.w3.org/2000/svg'%3E%3Crect width='42' height='42' fill='%230a0a0a'/%3E%3Cpath d='M11 3 L13.4 9 L19.5 9 L14.6 12.8 L16.5 18.8 L11 15.2 L5.5 18.8 L7.4 12.8 L2.5 9 L8.6 9 Z' fill='%23b4b4b4'/%3E%3Cpath d='M32 24 L34.4 30 L40.5 30 L35.6 33.8 L37.5 39.8 L32 36.2 L26.5 39.8 L28.4 33.8 L23.5 30 L29.6 30 Z' fill='%23909090'/%3E%3C/svg%3E");
 
-  --tex-puntos: radial-gradient(circle, rgba(255, 255, 255, 0.85) 0 32%, transparent 34%);
+  --lineas-cristal: url("data:image/svg+xml,%3Csvg width='130' height='130' viewBox='0 0 130 130' xmlns='http://www.w3.org/2000/svg'%3E%3Crect width='130' height='130' fill='%230a0a0a'/%3E%3Cg fill='none' stroke='%23bdbdbd' stroke-width='1.4'%3E%3Cpath d='M0 22 L40 50 L24 100 M40 50 L94 32 L130 72 M40 50 L64 130 M94 32 L112 0 M94 32 L130 13 M24 100 L76 115 L130 72 M76 115 L70 130 M0 70 L24 100'/%3E%3C/g%3E%3C/svg%3E");
 
-  --tex-diagonal: repeating-linear-gradient(
-    -58deg,
-    rgba(255, 255, 255, 0.55) 0 0.4%,
-    rgba(255, 255, 255, 0.12) 0.4% 0.9%,
-    transparent 0.9% 1.7%
-  );
+  --lineas-hieroglifo: url("data:image/svg+xml,%3Csvg width='38' height='38' viewBox='0 0 38 38' xmlns='http://www.w3.org/2000/svg'%3E%3Crect width='38' height='38' fill='%230a0a0a'/%3E%3Cg fill='%23c0c0c0'%3E%3Crect x='5' y='5' width='2' height='10'/%3E%3Crect x='9' y='7' width='6' height='2'/%3E%3Ccircle cx='26' cy='9' r='2.6'/%3E%3Crect x='23' y='14' width='6' height='2'/%3E%3Cpath d='M6 25 l5.5 -4.5 l5.5 4.5 l-5.5 4.5 Z'/%3E%3Crect x='23' y='24' width='2' height='9'/%3E%3Crect x='28' y='24' width='2' height='9'/%3E%3Crect x='23' y='22' width='7' height='2'/%3E%3C/g%3E%3C/svg%3E");
 
-  --tex-rejilla: repeating-linear-gradient(
-      90deg,
-      rgba(255, 255, 255, 0.5) 0 0.3%,
-      transparent 0.3% 1.2%
-    ),
-    repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.4) 0 0.3%, transparent 0.3% 1.2%);
+  --sello-25: url("data:image/svg+xml,%3Csvg width='200' height='120' viewBox='0 0 200 120' xmlns='http://www.w3.org/2000/svg'%3E%3Ctext x='50%25' y='52%25' font-family='Georgia, Times New Roman, serif' font-weight='700' font-size='72' fill='rgba(255,255,255,0.35)' stroke='rgba(255,220,140,0.95)' stroke-width='2' text-anchor='middle' dominant-baseline='middle'%3E25%3C/text%3E%3Ctext x='50%25' y='85%25' font-family='Georgia, serif' font-size='12' letter-spacing='3' fill='rgba(255,220,140,0.8)' text-anchor='middle'%3EANNIVERSARY%3C/text%3E%3C/svg%3E");
+}
 
-  --tex-paralelo: repeating-linear-gradient(
-    90deg,
-    rgba(255, 255, 255, 0.55) 0 0.22%,
-    rgba(255, 255, 255, 0.1) 0.22% 0.5%,
-    transparent 0.5% 0.95%
-  );
+/* =========================================================================
+   INCLINACIÓN DE LA CARTA
+   Las variables las escribe el hook useCardPointer sobre el contenedor.
+   ========================================================================= */
 
-  --tex-horizontal: repeating-linear-gradient(
-    0deg,
-    rgba(255, 255, 255, 0.6) 0 0.18%,
-    transparent 0.18% 0.6%
-  );
+.card-container {
+  /* `perspective()` dentro del propio transform evita tener que ponerla en
+     cada contenedor padre, que son distintos en cada vista. */
+  transform: perspective(650px) rotateY(var(--rotate-x, 0deg)) rotateX(var(--rotate-y, 0deg));
+  transform-style: preserve-3d;
+  transition: transform 0.4s cubic-bezier(0.23, 1, 0.32, 1);
+}
 
-  /* Relieve: luz arriba-izquierda y sombra abajo-derecha, como un grabado. */
-  --tex-relieve: repeating-linear-gradient(
-    135deg,
-    rgba(255, 245, 210, 0.55) 0 0.35%,
-    rgba(0, 0, 0, 0.4) 0.35% 0.8%,
-    transparent 0.8% 2.6%
-  );
-
-  --tex-estrellas: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M15 4 L18 12 L26 12 L19.5 17 L22 25 L15 20 L8 25 L10.5 17 L4 12 L12 12 Z' fill='rgba(255,255,255,0.85)'/%3E%3Cpath d='M45 34 L48 42 L56 42 L49.5 47 L52 55 L45 50 L38 55 L40.5 47 L34 42 L42 42 Z' fill='rgba(255,255,255,0.6)'/%3E%3C/svg%3E");
-
-  --tex-cristal: url("data:image/svg+xml,%3Csvg width='120' height='120' viewBox='0 0 120 120' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' stroke='rgba(255,255,255,0.9)' stroke-width='1.1'%3E%3Cpath d='M0 20 L38 46 L22 92 M38 46 L88 30 L120 66 M38 46 L60 120 M88 30 L104 0 M88 30 L120 12 M22 92 L70 106 L120 66 M70 106 L64 120'/%3E%3C/g%3E%3C/svg%3E");
-
-  --tex-mosaico: repeating-conic-gradient(
-    rgba(255, 255, 255, 0.5) 0% 25%,
-    transparent 0% 50%
-  );
-
-  --tex-hieroglifos: url("data:image/svg+xml,%3Csvg width='34' height='34' viewBox='0 0 34 34' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='rgba(255,235,180,0.85)'%3E%3Crect x='4' y='4' width='2' height='9'/%3E%3Crect x='8' y='6' width='5' height='2'/%3E%3Ccircle cx='23' cy='8' r='2.4'/%3E%3Crect x='21' y='12' width='5' height='2'/%3E%3Cpath d='M5 22 l5 -4 l5 4 l-5 4 Z'/%3E%3Crect x='20' y='21' width='2' height='8'/%3E%3Crect x='24' y='21' width='2' height='8'/%3E%3Crect x='20' y='19' width='6' height='2'/%3E%3C/g%3E%3C/svg%3E");
-
-  --sello-25: url("data:image/svg+xml,%3Csvg width='200' height='120' viewBox='0 0 200 120' xmlns='http://www.w3.org/2000/svg'%3E%3Ctext x='50%25' y='52%25' font-family='Georgia, Times New Roman, serif' font-weight='700' font-size='72' fill='rgba(255,255,255,0.3)' stroke='rgba(255,220,140,0.9)' stroke-width='2' text-anchor='middle' dominant-baseline='middle'%3E25%3C/text%3E%3Ctext x='50%25' y='85%25' font-family='Georgia, serif' font-size='12' letter-spacing='3' fill='rgba(255,220,140,0.75)' text-anchor='middle'%3EANNIVERSARY%3C/text%3E%3C/svg%3E");
+@media (prefers-reduced-motion: reduce) {
+  .card-container {
+    transform: none;
+  }
 }
 
 /* =========================================================================
    ESTRUCTURA
    ========================================================================= */
 
-/*
- * Ni `z-index` ni `opacity` aquí: ver la nota de arriba. Al ir posicionado ya
- * se pinta por encima de la imagen, y las insignias de la carta llevan su
- * propio z-index, así que siguen quedando delante.
- */
 .foil {
   position: absolute;
   inset: 0;
@@ -181,38 +145,37 @@
 
 .foil-zone {
   position: absolute;
-  pointer-events: none;
+  overflow: hidden;
 }
 
-/* Trama fija de la carta. */
+/*
+ * Capa de brillo.
+ *
+ * El `background-position` es el corazón del efecto: desplaza el arco iris en
+ * sentido contrario al cursor y multiplicado, de modo que un movimiento corto
+ * de la mano recorre un tramo largo del degradado. En reposo las variables no
+ * existen, el `calc` cae a 50 % y el foil queda centrado y quieto.
+ */
 .foil-zone::before {
   content: '';
   position: absolute;
   inset: 0;
-  background-image: var(--tex, none);
-  background-size: var(--tex-size, auto);
-  background-position: center;
-  mix-blend-mode: var(--tex-blend, soft-light);
-  opacity: var(--tex-alpha, 0.5);
-}
-
-/* Banda de luz que recorre la zona. */
-.foil-zone::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background-image: var(--band, none);
-  background-size: 260% 100%;
-  background-repeat: no-repeat;
-  mix-blend-mode: var(--band-blend, color-dodge);
-  opacity: var(--band-alpha, 0.55);
-  animation: foil-barrido var(--foil-vel) linear infinite;
+  background-image: var(--patron, none), var(--lineas, none);
+  background-position:
+    calc(((50% - var(--background-x, 50%)) * var(--par-x, 2.6)) + 50%)
+      calc(((50% - var(--background-y, 50%)) * var(--par-y, 3.4)) + 50%),
+    center center;
+  background-size: 400% 400%, var(--lineas-size, 3.5px 3.5px);
+  background-blend-mode: overlay;
+  filter: var(--shine-filter, brightness(0.95) contrast(2.4) saturate(1.25));
+  mix-blend-mode: var(--shine-blend, color-dodge);
+  opacity: calc(var(--shine-alpha, 0.38) + var(--card-active, 0) * var(--shine-boost, 0.34));
+  transition: opacity 0.35s ease;
 }
 
 .foil-zone--card {
   inset: 0;
   border-radius: inherit;
-  overflow: hidden;
 }
 
 .foil-zone--art {
@@ -222,14 +185,240 @@
   left: var(--zona-arte-left);
 }
 
+/*
+ * El nombre no se puede recortar letra a letra de un JPEG, así que se usa
+ * `lighten`: solo sustituye los píxeles MÁS OSCUROS que el brillo —las
+ * letras— y deja el marco claro como está. La máscara difumina los bordes para
+ * que no se vea el rectángulo, que era lo que cantaba antes.
+ */
 .foil-zone--name {
   top: var(--zona-nombre-top);
   right: var(--zona-nombre-right);
   bottom: var(--zona-nombre-bottom);
   left: var(--zona-nombre-left);
+  -webkit-mask-image: linear-gradient(to right, transparent, #000 7%, #000 93%, transparent);
+  mask-image: linear-gradient(to right, transparent, #000 7%, #000 93%, transparent);
 }
 
-.foil-zone--seal {
+.foil-zone--name::before {
+  --shine-blend: lighten;
+  --shine-filter: brightness(1.05) contrast(1.9) saturate(1.35);
+  --shine-alpha: 0.55;
+  --shine-boost: 0.45;
+  --par-x: 4.2;
+  --par-y: 1.6;
+}
+
+/* =========================================================================
+   FOIL DEL NOMBRE
+   ========================================================================= */
+
+.foil-name--silver::before { --patron: var(--patron-plata); --lineas: var(--lineas-diagonal); }
+.foil-name--gold::before { --patron: var(--patron-oro); --lineas: var(--lineas-diagonal); }
+.foil-name--rainbow::before { --patron: var(--patron-arcoiris); --lineas: var(--lineas-diagonal); }
+
+.foil-name--platinum::before {
+  --patron: var(--patron-plata);
+  --lineas: var(--lineas-cristal);
+  --lineas-size: 60px 60px;
+}
+
+/* Prismatic: el nombre no es de un color sólido, va moteado. */
+.foil-name--speckled::before {
+  --patron: var(--patron-arcoiris);
+  --lineas: var(--lineas-rejilla);
+  --lineas-size: 4px 4px;
+  --shine-filter: brightness(1.1) contrast(2.2) saturate(1.7);
+}
+
+/* =========================================================================
+   FOIL DE LA ILUSTRACIÓN
+   ========================================================================= */
+
+/* Super y Ultra: trama de puntos muy fina. */
+.foil-art--holo::before {
+  --patron: var(--patron-arcoiris);
+  --lineas: var(--lineas-punto);
+  --lineas-size: 3px 3px;
+}
+
+/* Secret: diagonales finísimas, que al inclinar cortan la luz como un cristal. */
+.foil-art--diagonal::before {
+  --patron: var(--patron-arcoiris);
+  --lineas: var(--lineas-diagonal);
+  --shine-filter: brightness(0.95) contrast(2.7) saturate(1.3);
+}
+
+/* Prismatic: misma familia, pero la trama va en horizontal y vertical. */
+.foil-art--grid::before {
+  --patron: var(--patron-arcoiris);
+  --lineas: var(--lineas-rejilla);
+  --lineas-size: 4px 4px;
+}
+
+/*
+ * Ultimate: la única rareza que se nota con el dedo. Ni arco iris ni
+ * diagonales: relieve. Se mezcla en `overlay` para que el grabado oscurezca y
+ * aclare la ilustración en vez de teñirla.
+ */
+.foil-art--emboss::before {
+  /*
+   * Patrón casi neutro a propósito. Con el oro, el `overlay` sobre una
+   * ilustración azul viraba a verde: aquí lo que tiene que leerse es el
+   * relieve (luz y sombra), no el color.
+   */
+  --patron: repeating-linear-gradient(
+    112deg, #6e6a60, #ece6d6, #8a8478, #ffffff, #7d776b, #6e6a60,
+    #6e6a60, #ece6d6, #8a8478, #ffffff, #7d776b, #6e6a60
+  );
+  --lineas: repeating-linear-gradient(135deg, #ffffff 0 1px, #000000 1px 2.5px, #6a6a6a 2.5px 5px);
+  --lineas-size: 5px 5px;
+  --shine-blend: overlay;
+  --shine-filter: brightness(1.04) contrast(1.7) saturate(0.55);
+  --shine-alpha: 0.6;
+  --shine-boost: 0.3;
+}
+
+/* Ghost: la ilustración sale casi blanca, vaciada, con halo iridiscente. */
+.foil-art--ghost::before {
+  --patron: var(--patron-arcoiris);
+  --lineas: radial-gradient(ellipse at 50% 45%, #f0f0f0 0 42%, #2a2a2a 78%);
+  --lineas-size: 100% 100%;
+  --shine-blend: screen;
+  --shine-filter: brightness(1.15) contrast(1.35) saturate(0.5);
+  --shine-alpha: 0.5;
+}
+
+/*
+ * Collector's: arco iris de mancha de aceite. Lo característico es que NO tiene
+ * una dirección clara —se compara con una huella dactilar—, de ahí el cónico.
+ */
+.foil-art--oilslick::before {
+  --patron: conic-gradient(
+    from 210deg,
+    var(--sp-1), var(--sp-3), var(--sp-5), var(--sp-2), var(--sp-6), var(--sp-4), var(--sp-1)
+  );
+  --lineas: var(--lineas-cristal);
+  --lineas-size: 70px 70px;
+  --par-x: 1.6;
+  --par-y: 1.6;
+  --shine-filter: brightness(0.95) contrast(2.2) saturate(1.5);
+}
+
+.foil-art--gold::before {
+  --patron: var(--patron-oro);
+  --lineas: var(--lineas-diagonal);
+}
+
+/* Pharaoh's Rare: una Ultra con jeroglíficos diminutos dentro del foil. */
+.foil-art--hieroglyph::before {
+  --patron: var(--patron-oro);
+  --lineas: var(--lineas-hieroglifo);
+  --lineas-size: 26px 26px;
+}
+
+/* =========================================================================
+   FOIL SOBRE TODA LA CARTA
+   Cubre también el marco y el cuadro de texto, así que van más flojas: si no,
+   la carta pierde su color y deja de leerse.
+   ========================================================================= */
+
+.foil-zone--card::before {
+  --shine-alpha: 0.26;
+  --shine-boost: 0.26;
+}
+
+.foil-card--parallel::before {
+  --patron: var(--patron-plata);
+  --lineas: var(--lineas-vertical);
+  --shine-blend: overlay;
+  --shine-filter: brightness(1.05) contrast(1.7) saturate(1.05);
+  --shine-alpha: 0.42;
+}
+
+.foil-card--starlight::before {
+  --patron: var(--patron-arcoiris);
+  --lineas: var(--lineas-horizontal);
+  --shine-alpha: 0.3;
+  --shine-boost: 0.3;
+}
+
+.foil-card--platinum::before {
+  --patron: var(--patron-plata);
+  --lineas: var(--lineas-cristal);
+  --lineas-size: 70px 70px;
+  --shine-blend: overlay;
+  --shine-alpha: 0.4;
+}
+
+.foil-card--qcr::before {
+  --patron: var(--patron-arcoiris);
+  --lineas: var(--lineas-vertical);
+  --shine-alpha: 0.32;
+  --shine-boost: 0.32;
+}
+
+.foil-card--stars::before {
+  --patron: var(--patron-plata);
+  --lineas: var(--lineas-estrella);
+  --lineas-size: 34px 34px;
+  --shine-blend: overlay;
+  --shine-filter: brightness(1.1) contrast(1.8);
+  --shine-alpha: 0.5;
+}
+
+.foil-card--mosaic::before {
+  --patron: var(--patron-plata);
+  --lineas: var(--lineas-rejilla);
+  --lineas-size: 7px 5px;
+  --shine-blend: overlay;
+  --shine-filter: brightness(1.1) contrast(1.7);
+  --shine-alpha: 0.45;
+}
+
+.foil-card--shatter::before {
+  --patron: var(--patron-plata);
+  --lineas: var(--lineas-cristal);
+  --lineas-size: 75px 75px;
+  --shine-blend: overlay;
+  --shine-filter: brightness(1.12) contrast(1.9);
+  --shine-alpha: 0.55;
+}
+
+.foil-card--gold::before {
+  --patron: var(--patron-oro);
+  --lineas: var(--lineas-diagonal);
+  --shine-blend: overlay;
+  --shine-alpha: 0.34;
+}
+
+/* Grand Master: arco iris en la carta y jeroglíficos recorriendo el canto. */
+.foil-card--grandmaster::before {
+  --patron: var(--patron-arcoiris);
+  --lineas: var(--lineas-hieroglifo);
+  --lineas-size: 30px 30px;
+  --shine-alpha: 0.3;
+  --shine-boost: 0.3;
+}
+
+/* =========================================================================
+   RELIEVE, SELLO Y REFLEJO
+   ========================================================================= */
+
+/* Ultimate, Premium Gold, Collector's y Grand Master llevan el marco resaltado. */
+.foil-emboss {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 236, 180, 0.5),
+    inset 0 0 5px rgba(255, 244, 210, 0.35),
+    inset 0 0 18px rgba(0, 0, 0, 0.4);
+  mix-blend-mode: overlay;
+}
+
+.foil-seal {
+  position: absolute;
   right: 12%;
   bottom: 30.5%;
   width: 24%;
@@ -239,330 +428,25 @@
   background-repeat: no-repeat;
   background-position: center;
   mix-blend-mode: overlay;
-  opacity: 0.8;
-}
-
-/* =========================================================================
-   NOMBRE
-   Solo las letras llevan foil. Como no se pueden recortar las letras de un
-   JPEG, la banda va casi transparente: se lee como un destello cruzando el
-   nombre y no como un rectángulo aclarado.
-   ========================================================================= */
-
-.foil-name--silver {
-  --band: var(--banda-plata);
-  --band-alpha: 0.9;
-  --band-blend: lighten;
-}
-
-.foil-name--gold {
-  --band: var(--banda-oro);
-  --band-alpha: 0.95;
-  --band-blend: lighten;
-}
-
-.foil-name--platinum {
-  --band: var(--banda-platino);
-  --band-alpha: 0.9;
-  --band-blend: lighten;
-  --tex: var(--tex-cristal);
-  --tex-size: 55% auto;
-  --tex-alpha: 0.25;
-}
-
-.foil-name--rainbow {
-  --band: var(--banda-arcoiris);
-  --band-alpha: 0.9;
-  --band-blend: lighten;
-  --tex: var(--tex-diagonal);
-  --tex-size: 100% 100%;
-  --tex-alpha: 0.18;
-}
-
-/* Prismatic: el nombre no es de un color sólido, va moteado. */
-.foil-name--speckled {
-  --band: var(--banda-arcoiris);
-  --band-alpha: 0.9;
-  --band-blend: lighten;
-  --tex: radial-gradient(circle at 30% 40%, rgba(255, 120, 220, 0.9) 0 22%, transparent 24%),
-    radial-gradient(circle at 70% 65%, rgba(120, 230, 255, 0.9) 0 20%, transparent 22%);
-  --tex-size: 14% 60%, 18% 70%;
-  --tex-blend: color-dodge;
-  --tex-alpha: 0.3;
-}
-
-/* =========================================================================
-   ILUSTRACIÓN
-   ========================================================================= */
-
-/* Super y Ultra: holograma de trama de puntos muy fina. */
-.foil-art--holo {
-  --tex: var(--tex-puntos), var(--iris-estatico);
-  --tex-size: 1.5% 1.05%, 100% 100%;
-  --tex-blend: overlay;
-  --tex-alpha: 0.55;
-  --band: var(--banda-arcoiris);
-  --band-alpha: 0.5;
-}
-
-/* Secret: diagonales finísimas, que al inclinar cortan la luz como un cristal. */
-.foil-art--diagonal {
-  --tex: var(--tex-diagonal), var(--iris-estatico);
-  --tex-size: 100% 100%, 100% 100%;
-  --tex-blend: overlay;
-  --tex-alpha: 0.7;
-  --band: var(--banda-arcoiris);
-  --band-alpha: 0.55;
-}
-
-/* Prismatic: misma familia, pero la trama va en horizontal y vertical. */
-.foil-art--grid {
-  --tex: var(--tex-rejilla), var(--iris-estatico);
-  --tex-size: 100% 100%, 100% 100%, 100% 100%;
-  --tex-blend: overlay;
-  --tex-alpha: 0.7;
-  --band: var(--banda-arcoiris);
-  --band-alpha: 0.55;
-}
-
-/* Ultimate: la única rareza que se nota con el dedo. Relieve, sin diagonales. */
-.foil-art--emboss {
-  --tex: var(--tex-relieve);
-  --tex-size: 100% 100%;
-  --tex-blend: overlay;
-  --tex-alpha: 0.85;
-  --band: var(--banda-oro);
-  --band-alpha: 0.5;
-  --band-blend: overlay;
-}
-
-/* Ghost: el arte sale casi blanco, vaciado, y el color solo asoma por fuera. */
-.foil-art--ghost {
-  --tex: radial-gradient(
-    ellipse at 50% 45%,
-    rgba(255, 255, 255, 0.9) 0%,
-    rgba(255, 255, 255, 0.45) 42%,
-    transparent 70%
-  );
-  --tex-size: 100% 100%;
-  --tex-blend: screen;
-  --tex-alpha: 0.6;
-  --band: var(--banda-arcoiris);
-  --band-alpha: 0.45;
-  --band-blend: screen;
+  opacity: 0.85;
 }
 
 /*
- * Collector's: arco iris de mancha de aceite. Lo suyo es que NO tiene una
- * dirección clara —se compara con una huella dactilar—, de ahí el cónico en
- * vez de un degradado recto.
+ * Reflejo especular: el punto de luz que sigue a la mano. En reposo está
+ * apagado, porque una carta quieta bajo una luz fija tampoco destella.
  */
-.foil-art--oilslick {
-  --tex: conic-gradient(
-    from 210deg at 38% 62%,
-    rgba(255, 90, 200, 0.7),
-    rgba(90, 210, 255, 0.7),
-    rgba(150, 255, 180, 0.7),
-    rgba(255, 225, 100, 0.7),
-    rgba(180, 120, 255, 0.7),
-    rgba(255, 90, 200, 0.7)
-  );
-  --tex-size: 150% 150%;
-  --tex-blend: overlay;
-  --tex-alpha: 0.6;
-  --band: var(--banda-plata);
-  --band-alpha: 0.4;
-}
-
-.foil-art--gold {
-  --tex: var(--tex-diagonal);
-  --tex-size: 100% 100%;
-  --tex-blend: overlay;
-  --tex-alpha: 0.55;
-  --band: var(--banda-oro);
-  --band-alpha: 0.6;
-  --band-blend: overlay;
-}
-
-/* Pharaoh's Rare: una Ultra con jeroglíficos diminutos dentro del foil. */
-.foil-art--hieroglyph {
-  --tex: var(--tex-hieroglifos), var(--iris-estatico);
-  --tex-size: 11% auto, 100% 100%;
-  --tex-blend: overlay;
-  --tex-alpha: 0.6;
-  --band: var(--banda-oro);
-  --band-alpha: 0.55;
-}
-
-/* =========================================================================
-   TODA LA CARTA
-   ========================================================================= */
-
-.foil-card--parallel {
-  --tex: var(--tex-paralelo);
-  --tex-size: 100% 100%;
-  --tex-blend: overlay;
-  --tex-alpha: 0.6;
-  --band: var(--banda-plata);
-  --band-alpha: 0.4;
-  --band-blend: overlay;
-}
-
-.foil-card--starlight {
-  --tex: var(--tex-horizontal), var(--iris-estatico);
-  --tex-size: 100% 100%, 100% 100%;
-  --tex-blend: overlay;
-  --tex-alpha: 0.42;
-  --band: var(--banda-arcoiris);
-  --band-alpha: 0.38;
-}
-
-.foil-card--platinum {
-  --tex: var(--tex-cristal);
-  --tex-size: 38% auto;
-  --tex-blend: overlay;
-  --tex-alpha: 0.6;
-  --band: var(--banda-platino);
-  --band-alpha: 0.5;
-  --band-blend: overlay;
-}
-
-.foil-card--qcr {
-  --tex: var(--tex-paralelo), var(--iris-estatico);
-  --tex-size: 100% 100%, 100% 100%;
-  --tex-blend: overlay;
-  --tex-alpha: 0.45;
-  --band: var(--banda-arcoiris);
-  --band-alpha: 0.4;
-}
-
-.foil-card--stars {
-  --tex: var(--tex-estrellas);
-  --tex-size: 15% auto;
-  --tex-blend: overlay;
-  --tex-alpha: 0.8;
-  --band: var(--banda-plata);
-  --band-alpha: 0.35;
-  --band-blend: overlay;
-}
-
-.foil-card--mosaic {
-  --tex: var(--tex-mosaico);
-  --tex-size: 3.2% 2.2%;
-  --tex-blend: overlay;
-  --tex-alpha: 0.7;
-  --band: var(--banda-plata);
-  --band-alpha: 0.35;
-  --band-blend: overlay;
-}
-
-.foil-card--shatter {
-  --tex: var(--tex-cristal);
-  --tex-size: 40% auto;
-  --tex-blend: overlay;
-  --tex-alpha: 0.85;
-  --band: var(--banda-plata);
-  --band-alpha: 0.35;
-  --band-blend: overlay;
-}
-
-.foil-card--gold {
-  --tex: var(--banda-oro);
-  --tex-size: 100% 100%;
-  --tex-blend: overlay;
-  --tex-alpha: 0.4;
-  --band: var(--banda-oro);
-  --band-alpha: 0.5;
-  --band-blend: overlay;
-}
-
-/*
- * Grand Master Rare: arco iris sobre atributo, nivel y borde del cuadro de
- * texto, más una cenefa de jeroglíficos recorriendo el canto de la carta. Los
- * jeroglíficos se repiten solo por los cuatro bordes, de ahí las cuatro capas
- * con `repeat-x` y `repeat-y` ancladas a cada lado.
- */
-.foil-card--grandmaster {
-  --tex: var(--tex-hieroglifos), var(--tex-hieroglifos), var(--tex-hieroglifos),
-    var(--tex-hieroglifos), var(--iris-estatico);
-  --tex-size: auto 5%, auto 5%, 4% auto, 4% auto, 100% 100%;
-  --tex-blend: overlay;
-  --tex-alpha: 0.5;
-  --band: var(--banda-arcoiris);
-  --band-alpha: 0.4;
-}
-
-.foil-card--grandmaster::before {
-  background-repeat: repeat-x, repeat-x, repeat-y, repeat-y, no-repeat;
-  background-position: top center, bottom center, left center, right center, center;
-}
-
-/* =========================================================================
-   RELIEVE Y REFLEJO
-   ========================================================================= */
-
-/* Ultimate, Premium Gold y Collector's llevan el marco resaltado. */
-.foil-emboss {
-  box-shadow:
-    inset 0 0 0 1px rgba(255, 234, 175, 0.45),
-    inset 0 0 4px rgba(255, 242, 205, 0.35),
-    inset 0 0 16px rgba(0, 0, 0, 0.35);
-  mix-blend-mode: overlay;
-}
-
-.foil-emboss::before,
-.foil-emboss::after {
-  content: none;
-}
-
-/*
- * Reflejo que sigue al cursor. En reposo no se ve: una carta quieta bajo una
- * luz fija tampoco destella. Las variables las escribe el componente.
- */
-.foil-glare::before {
-  content: none;
-}
-
-.foil-glare::after {
+.foil-glare {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
   background-image: radial-gradient(
-    circle at var(--foil-x, 50%) var(--foil-y, 50%),
-    rgba(255, 255, 255, 0.7) 0%,
-    rgba(255, 255, 255, 0.2) 16%,
-    transparent 40%
+    farthest-corner circle at var(--pointer-x, 50%) var(--pointer-y, 50%),
+    hsla(0, 0%, 100%, 0.75) 8%,
+    hsla(0, 0%, 100%, 0.15) 26%,
+    hsla(0, 0%, 0%, 0.45) 90%
   );
-  background-size: 100% 100%;
-  mix-blend-mode: color-dodge;
-  opacity: 0;
-  animation: none;
-  transition: opacity 0.3s ease;
-}
-
-.card-container:hover .foil-glare::after {
-  opacity: 1;
-}
-
-/* Con el cursor encima el foil sube, como al girar la carta hacia la luz. */
-.card-container:hover .foil-zone::after {
-  animation-duration: var(--foil-vel-activa);
-}
-
-/* =========================================================================
-   ANIMACIÓN
-   ========================================================================= */
-
-/*
- * Solo se desplaza la posición del degradado: no hay que recalcular el diseño,
- * y con cientos de cartas a la vez eso importa.
- */
-@keyframes foil-barrido {
-  0% { background-position: -80% 50%; }
-  100% { background-position: 180% 50%; }
-}
-
-/* Quien haya pedido menos movimiento se queda con el foil quieto, no sin él. */
-@media (prefers-reduced-motion: reduce) {
-  .foil-zone::after {
-    animation: none;
-    background-position: 50% 50%;
-  }
+  mix-blend-mode: overlay;
+  filter: brightness(0.9) contrast(1.6);
+  opacity: calc(var(--card-active, 0) * 0.85);
+  transition: opacity 0.35s ease;
 }

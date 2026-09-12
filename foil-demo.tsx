@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import ReactDOM from 'react-dom/client';
 import CardFoilOverlay from './components/CardFoilOverlay';
+import { useCardPointer } from './components/useCardPointer';
 import './index.css';
 
 /*
@@ -85,6 +86,39 @@ const CARTAS: Record<string, string> = {
   'Monster Reborn (mágica)': 'https://images.ygoprodeck.com/images/cards/83764718.jpg',
 };
 
+/** Una carta del banco de pruebas. Cada una lleva su propio seguimiento de puntero. */
+function CartaDemo({ rareza, img, zonas }: { rareza: string; img: string; zonas: boolean }) {
+  const ref = useCardPointer();
+
+  return (
+    <figure className="flex flex-col gap-2">
+      <div
+        ref={ref}
+        className="card-container relative w-full aspect-[421/614] rounded-lg overflow-hidden bg-black"
+        style={{ containerType: 'inline-size' }}
+      >
+        <img src={img} alt="" className="absolute inset-0 w-full h-full object-cover" />
+        <CardFoilOverlay rarity={rareza} />
+        {zonas && (
+          <>
+            <div
+              className="absolute border border-dashed border-cyan-400/80 z-[30]"
+              style={{ top: '17.2%', right: '11.5%', bottom: '29.4%', left: '10.4%' }}
+            />
+            <div
+              className="absolute border border-dashed border-pink-400/80 z-[30]"
+              style={{ top: '5.4%', right: '20%', bottom: '89.5%', left: '5.8%' }}
+            />
+          </>
+        )}
+      </div>
+      <figcaption className="text-xs font-medium text-muted text-center leading-tight">
+        {rareza}
+      </figcaption>
+    </figure>
+  );
+}
+
 function Demo() {
   const [carta, setCarta] = useState<string>('Dark Magician');
   const [ancho, setAncho] = useState(220);
@@ -156,34 +190,7 @@ function Demo() {
             style={{ gridTemplateColumns: `repeat(auto-fill, minmax(${ancho}px, 1fr))` }}
           >
             {grupo.rarezas.map((rareza) => (
-              <figure key={rareza} className="flex flex-col gap-2">
-                <div
-                  className="card-container relative w-full aspect-[421/614] rounded-lg overflow-hidden bg-black"
-                  style={{ containerType: 'inline-size' }}
-                >
-                  <img
-                    src={CARTAS[carta]}
-                    alt=""
-                    className="absolute inset-0 w-full h-full object-cover"
-                  />
-                  <CardFoilOverlay rarity={rareza} />
-                  {zonas && (
-                    <>
-                      <div
-                        className="absolute border border-dashed border-cyan-400/80 z-[30]"
-                        style={{ top: '17.2%', right: '11.5%', bottom: '29.4%', left: '10.4%' }}
-                      />
-                      <div
-                        className="absolute border border-dashed border-pink-400/80 z-[30]"
-                        style={{ top: '5.4%', right: '20%', bottom: '89.5%', left: '5.8%' }}
-                      />
-                    </>
-                  )}
-                </div>
-                <figcaption className="text-xs font-medium text-muted text-center leading-tight">
-                  {rareza}
-                </figcaption>
-              </figure>
+              <CartaDemo key={rareza} rareza={rareza} img={CARTAS[carta]!} zonas={zonas} />
             ))}
           </div>
         </section>

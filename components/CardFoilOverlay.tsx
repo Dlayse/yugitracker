@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from 'react';
+import { useMemo } from 'react';
 import './CardFoilOverlay.css';
 
 /*
@@ -195,57 +195,26 @@ interface Props {
   rarity: string;
 }
 
+/**
+ * Capas de foil de una carta.
+ *
+ * Solo pinta: el seguimiento del puntero y la inclinación viven en
+ * `useCardPointer`, enganchado al contenedor de la carta, porque el reflejo
+ * tiene que existir también en las Common, que no pintan ninguna capa.
+ */
 export default function CardFoilOverlay({ rarity }: Props) {
   const spec = useMemo(() => resolveFoil(rarity), [rarity]);
-  const ref = useRef<HTMLDivElement>(null);
-
-  /*
-   * Un foil real solo se enciende al mover la carta bajo la luz. Aquí se sigue
-   * el puntero por encima de la carta y su posición se guarda en dos variables
-   * CSS que el reflejo usa como origen.
-   *
-   * Se escribe directamente sobre el nodo, sin pasar por el estado de React:
-   * un `setState` por cada píxel de movimiento repintaría la cuadrícula entera.
-   * Y `pointermove` solo se escucha mientras el cursor está encima, así que no
-   * quedan cientos de escuchas activas a la vez.
-   */
-  useEffect(() => {
-    const el = ref.current;
-    const host = el?.parentElement;
-    if (!el || !host) return;
-
-    const onMove = (e: PointerEvent) => {
-      const r = host.getBoundingClientRect();
-      if (!r.width || !r.height) return;
-      el.style.setProperty('--foil-x', `${((e.clientX - r.left) / r.width) * 100}%`);
-      el.style.setProperty('--foil-y', `${((e.clientY - r.top) / r.height) * 100}%`);
-    };
-    const onEnter = () => host.addEventListener('pointermove', onMove);
-    const onLeave = () => {
-      host.removeEventListener('pointermove', onMove);
-      el.style.removeProperty('--foil-x');
-      el.style.removeProperty('--foil-y');
-    };
-
-    host.addEventListener('pointerenter', onEnter);
-    host.addEventListener('pointerleave', onLeave);
-    return () => {
-      host.removeEventListener('pointerenter', onEnter);
-      host.removeEventListener('pointerleave', onLeave);
-      host.removeEventListener('pointermove', onMove);
-    };
-  }, [spec]);
 
   if (!spec) return null; // Common: nada que pintar, y una capa menos por carta.
 
   return (
-    <div ref={ref} className="foil" aria-hidden="true">
+    <div className="foil" aria-hidden="true">
       {spec.card && <div className={`foil-zone foil-zone--card foil-card--${spec.card}`} />}
       {spec.art && <div className={`foil-zone foil-zone--art foil-art--${spec.art}`} />}
       {spec.name && <div className={`foil-zone foil-zone--name foil-name--${spec.name}`} />}
-      {spec.emboss && <div className="foil-zone foil-zone--card foil-emboss" />}
-      {spec.seal25 && <div className="foil-zone foil-zone--seal" />}
-      <div className="foil-zone foil-zone--card foil-glare" />
+      {spec.emboss && <div className="foil-emboss" />}
+      {spec.seal25 && <div className="foil-seal" />}
+      <div className="foil-glare" />
     </div>
   );
 }

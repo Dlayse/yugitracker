@@ -24,22 +24,34 @@ Los datos de las cartas vienen de la API pública de [YGOPRODeck](https://ygopro
 Lo que distingue una rareza de otra no es "cuánto brilla", sino **qué parte de la carta lleva
 foil y con qué trama**: la Rare solo el nombre, la Super Rare solo la ilustración, la Secret
 Rare ambas con líneas diagonales, la Parallel toda la superficie. Las coordenadas de cada zona
-están medidas sobre las imágenes reales de YGOPRODeck y son iguales en monstruo, mágica y trampa.
+están medidas sobre las imágenes reales de YGOPRODeck analizando los bordes del marco, y son
+iguales en monstruo, mágica y trampa.
 
-Cada rareza se declara con cuatro variables CSS (textura, tamaño, modo de mezcla y opacidad);
-de pintarlas se encargan dos reglas genéricas. Añadir una rareza nueva es escribir esas
-variables, no copiar un bloque entero.
+La técnica de los brillos es la de los efectos holográficos de cartas hechos en CSS (referente:
+[pokemon-cards-css](https://github.com/simeydotme/pokemon-cards-css)). Tres piezas:
 
-Para ajustarlos hay un banco de pruebas con todas las rarezas a la vez sobre la misma carta:
+1. **La luz la manda el puntero, no un temporizador.** El degradado se dibuja sobre un lienzo
+   del 400 % y su `background-position` se calcula desde la posición del cursor, con un
+   multiplicador que lo desplaza en sentido contrario y más rápido. Un barrido por reloj se lee
+   como un "cargando"; este se lee como luz recorriendo la carta.
+2. **Contraste alto** (`filter: contrast(2.4)`) sobre la capa de brillo: es lo que convierte un
+   degradado blando en bandas nítidas de metal.
+3. **Microlíneas mezcladas con el arco iris** mediante `background-blend-mode`, que son el
+   rayado fino que tiene el foil de verdad.
+
+Encima va un reflejo especular centrado en el cursor y la carta **se inclina en 3D** siguiendo
+la mano (`useCardPointer`), que es lo que hace que parezca una carta y no una pegatina.
+
+Para ajustarlos hay un banco de pruebas con las 41 rarezas a la vez sobre la misma carta:
 
 ```bash
 npm run dev
 ```
 
-y abrir **http://localhost:3000/foil-demo.html**. Permite cambiar de carta, cambiar el tamaño y
-dibujar las zonas medidas encima. Usa el componente de verdad, así que lo que se ve ahí es
-exactamente lo que se ve en la colección. Vite solo empaqueta `index.html`, de modo que esta
-página no llega a producción.
+y abrir **http://localhost:3000/foil-demo.html**. Permite cambiar de carta y de tamaño, dibujar
+las zonas medidas encima y congelar el barrido para juzgar el estado en reposo. Usa el
+componente de verdad, así que lo que se ve ahí es lo que se ve en la colección. Vite solo
+empaqueta `index.html`, de modo que esta página no llega a producción.
 
 > Al tocar `CardFoilOverlay.css`, ojo con una trampa: **ni `z-index` ni `opacity` en los
 > contenedores**. Cualquiera de los dos crea un contexto de apilamiento que aísla la mezcla, los
@@ -92,6 +104,7 @@ utils.ts             Rarezas, estados, colores del tema, exportación
 context/             Estado global (useReducer) y guardado en localStorage
 services/            Cliente de la API de YGOPRODeck, con caché y freno de peticiones
 components/          Vistas de carta y carpeta, cabecera, filtros, brillos
+useCardPointer.ts    Inclinación 3D y seguimiento del puntero de cada carta
 foil-demo.html       Banco de pruebas de los brillos (solo desarrollo)
 components/Modals/   Añadir carta, editar carta, carpeta y tema
 ```
