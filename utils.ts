@@ -120,35 +120,6 @@ export const getRarityColor = (rarityString: string): string => {
   return '#a1a1aa'; // Gray/Common
 };
 
-export type FoilType = 'qc' | 'platinum' | 'starlight' | 'prismatic' | 'secret' | 'collector' | 'ultimate' | 'ghost' | 'premium-gold' | 'gold' | 'ultra' | 'super' | 'rare' | 'common';
-
-export const getFoilType = (rarityString: string): FoilType => {
-  const r = (rarityString || '').toLowerCase();
-  
-  // 1. Special / High End
-  if (r.includes('quarter') || r.includes('25th') || r.includes('10000')) return 'qc'; // Treat 10k as QC for foil effect
-  if (r.includes('platinum')) return 'platinum';
-  if (r.includes('ghost')) return 'ghost';
-  if (r.includes('ultimate')) return 'ultimate';
-  if (r.includes('collector')) return 'collector';
-  
-  // 2. Sparkly Variants
-  if (r.includes('starlight')) return 'starlight';
-  if (r.includes('prismatic') || r.includes('pharaoh') || r.includes('millennium')) return 'prismatic';
-  
-  // 3. Standard Foils
-  if (r.includes('secret')) return 'secret';
-  if (r.includes('premium gold')) return 'premium-gold';
-  if (r.includes('gold')) return 'gold';
-  if (r.includes('ultra')) return 'ultra';
-  if (r.includes('super')) return 'super';
-  
-  // 4. Low End
-  if (r.includes('rare')) return 'rare';
-  
-  return 'common';
-};
-
 export const getConditionMeta = (code: string) => {
   const map: Record<string, { color: string; label: string }> = {
     'MT': { color: '#22c55e', label: 'MT' },

@@ -188,7 +188,7 @@ export const CardItem: React.FC<Props> = React.memo(({ card, onPress, viewMode, 
             {isSelectionMode && <SelectionOverlay />}
 
             {/* CARD IMAGE */}
-            <div className="w-full h-full bg-[#111] relative">
+            <div className="card-container w-full h-full bg-[#111] relative">
                  <img 
                     src={card.img}
                         onError={onCardImageError} 

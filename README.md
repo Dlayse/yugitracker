@@ -13,11 +13,38 @@ Los datos de las cartas vienen de la API pública de [YGOPRODeck](https://ygopro
   estado (de Mint a Poor), precio pagado, etiquetas y notas.
 - **Cuatro vistas**: cuadrícula, lista, álbum (a modo de carpeta de fundas, con páginas que
   pasan) y display, que enseña solo las imágenes.
-- **Brillos por rareza**: cada rareza tiene su reflejo, de Super Rare a Quarter Century.
+- **Brillos por rareza**: cada rareza brilla donde brilla en la carta real (ver abajo).
 - **Cartas buscadas**: márcalas como *wanted* para llevar la lista de lo que te falta.
 - **Filtros** por tipo de carta, tipo de monstruo, propiedad de mágica o trampa, set y rareza.
 - **Temas**: acento y fondo a elegir, con claro y oscuro automáticos, y colores propios guardados.
 - **Copias de seguridad**: exporta e importa toda la colección en un JSON.
+
+## Los brillos de rareza
+
+Lo que distingue una rareza de otra no es "cuánto brilla", sino **qué parte de la carta lleva
+foil y con qué trama**: la Rare solo el nombre, la Super Rare solo la ilustración, la Secret
+Rare ambas con líneas diagonales, la Parallel toda la superficie. Las coordenadas de cada zona
+están medidas sobre las imágenes reales de YGOPRODeck y son iguales en monstruo, mágica y trampa.
+
+Cada rareza se declara con cuatro variables CSS (textura, tamaño, modo de mezcla y opacidad);
+de pintarlas se encargan dos reglas genéricas. Añadir una rareza nueva es escribir esas
+variables, no copiar un bloque entero.
+
+Para ajustarlos hay un banco de pruebas con todas las rarezas a la vez sobre la misma carta:
+
+```bash
+npm run dev
+```
+
+y abrir **http://localhost:3000/foil-demo.html**. Permite cambiar de carta, cambiar el tamaño y
+dibujar las zonas medidas encima. Usa el componente de verdad, así que lo que se ve ahí es
+exactamente lo que se ve en la colección. Vite solo empaqueta `index.html`, de modo que esta
+página no llega a producción.
+
+> Al tocar `CardFoilOverlay.css`, ojo con una trampa: **ni `z-index` ni `opacity` en los
+> contenedores**. Cualquiera de los dos crea un contexto de apilamiento que aísla la mezcla, los
+> `mix-blend-mode` dejan de ver la imagen de la carta y el efecto degenera en un velo de color
+> que apaga la ilustración. Está explicado al principio del archivo.
 
 ## Puesta en marcha
 
@@ -65,6 +92,7 @@ utils.ts             Rarezas, estados, colores del tema, exportación
 context/             Estado global (useReducer) y guardado en localStorage
 services/            Cliente de la API de YGOPRODeck, con caché y freno de peticiones
 components/          Vistas de carta y carpeta, cabecera, filtros, brillos
+foil-demo.html       Banco de pruebas de los brillos (solo desarrollo)
 components/Modals/   Añadir carta, editar carta, carpeta y tema
 ```
 

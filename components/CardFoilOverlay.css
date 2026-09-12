@@ -1,432 +1,528 @@
-/* CardFoilOverlay.css */
+/*
+ * Brillos de foil por rareza.
+ *
+ * ---------------------------------------------------------------------------
+ * CÓMO ESTÁ MONTADO
+ * ---------------------------------------------------------------------------
+ * Cada rareza se describe con variables, no con reglas sueltas. Una zona solo
+ * declara QUÉ textura lleva y QUÉ banda de luz la recorre; de pintarlas se
+ * encargan dos reglas genéricas (`::before` y `::after`). Añadir una rareza es
+ * escribir cuatro variables, no copiar un bloque entero.
+ *
+ *   --tex / --tex-size / --tex-blend / --tex-alpha    trama fija de la carta
+ *   --band / --band-blend / --band-alpha              reflejo que barre
+ *
+ * ---------------------------------------------------------------------------
+ * DOS COSAS QUE HAY QUE RESPETAR
+ * ---------------------------------------------------------------------------
+ * 1. NADA DE `z-index` NI `opacity` en los contenedores. Cualquiera de los dos
+ *    crea un contexto de apilamiento, que aísla la mezcla: los `mix-blend-mode`
+ *    dejan de ver la imagen de la carta y el efecto degenera en un velo de
+ *    color que apaga la ilustración. La opacidad se aplica solo en las capas
+ *    hoja (`::before` / `::after`), que son las que mezclan.
+ *
+ * 2. LAS BANDAS SON CASI TRANSPARENTES. Un foil no tiñe la carta: añade luz
+ *    encima. Por eso los degradados son transparentes salvo en una franja
+ *    estrecha que se desplaza, igual que el reflejo al girar la carta.
+ *
+ * ---------------------------------------------------------------------------
+ * GEOMETRÍA
+ * ---------------------------------------------------------------------------
+ * Las zonas están medidas sobre las imágenes reales de YGOPRODeck (813x1185) y
+ * coinciden en monstruo, mágica y trampa. El recuadro de la ilustración es
+ * cuadrado (639x633 px), como en la carta física.
+ */
 
 :root {
-  /* Velocidades base */
-  --foil-idle-speed: 6s; 
-  --foil-active-speed: 3s;
-  
-  /* Velocidad unificada para patrones (Starfoil, Mosaic, Parallel) */
-  --pattern-speed: 6s;
+  --zona-nombre-top: 5.4%;
+  --zona-nombre-bottom: 89.5%;
+  --zona-nombre-left: 5.8%;
+  --zona-nombre-right: 20%;
 
-  /* Opacities - Adjusted */
-  --foil-idle-opacity: 0.3; 
-  --foil-active-opacity: 0.6;
-  --foil-blend-mode: color-dodge;
+  --zona-arte-top: 17.2%;
+  --zona-arte-bottom: 29.4%;
+  --zona-arte-left: 10.4%;
+  --zona-arte-right: 11.5%;
 
-  /* Gradiente Arcoíris Premium */
-  --rainbow-grad: linear-gradient(
-    115deg, 
-    rgba(255, 0, 0, 0.4) 0%, 
-    rgba(255, 215, 0, 0.4) 20%, 
-    rgba(0, 255, 0, 0.4) 40%, 
-    rgba(0, 255, 255, 0.4) 60%, 
-    rgba(255, 0, 255, 0.4) 80%,
-    rgba(255, 0, 0, 0.4) 100%
+  --foil-vel: 7s;
+  --foil-vel-activa: 3.5s;
+
+  /* --- Bandas de luz. Transparentes salvo la franja central. --- */
+
+  --banda-arcoiris: linear-gradient(
+    108deg,
+    transparent 0 28%,
+    rgba(255, 70, 90, 0.55) 34%,
+    rgba(255, 205, 70, 0.55) 40%,
+    rgba(120, 255, 150, 0.55) 46%,
+    rgba(70, 215, 255, 0.55) 52%,
+    rgba(165, 120, 255, 0.55) 58%,
+    rgba(255, 95, 205, 0.55) 64%,
+    transparent 70% 100%
   );
 
-  /* SVG Patterns Data URIs */
-  --pattern-starfoil: url("data:image/svg+xml,%3Csvg width='50' height='50' viewBox='0 0 50 50' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M25 5 L30 20 L45 20 L32 30 L38 45 L25 35 L12 45 L18 30 L5 20 L20 20 Z' fill='rgba(255,255,255,0.5)'/%3E%3C/svg%3E");
-  --pattern-shatter: url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 0 L30 50 L0 100 L50 70 L100 100 L70 50 L100 0 L50 30 Z' fill='rgba(255,255,255,0.15)'/%3E%3C/svg%3E");
-  
-  /* Hexagon Pattern */
-  --pattern-honeycomb: url("data:image/svg+xml,%3Csvg width='20' height='34' viewBox='0 0 20 34' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M10 0 L20 5.7 L20 17 L10 22.7 L0 17 L0 5.7 Z' fill='none' stroke='rgba(0,0,0,0.6)' stroke-width='1.5'/%3E%3C/svg%3E");
+  --banda-oro: linear-gradient(
+    108deg,
+    transparent 0 30%,
+    rgba(196, 148, 48, 0.45) 38%,
+    rgba(255, 232, 158, 0.9) 46%,
+    rgba(255, 250, 225, 1) 50%,
+    rgba(255, 232, 158, 0.9) 54%,
+    rgba(196, 148, 48, 0.45) 62%,
+    transparent 70% 100%
+  );
 
-  /* Mosaic Pattern: Bloques más opacos para visibilidad */
-  --pattern-mosaic: url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Crect x='0' y='0' width='20' height='20' fill='rgba(255,255,255,0.25)'/%3E%3Crect x='20' y='20' width='20' height='20' fill='rgba(255,255,255,0.35)'/%3E%3Crect x='20' y='0' width='20' height='20' fill='rgba(255,255,255,0.15)'/%3E%3Crect x='0' y='20' width='20' height='20' fill='rgba(255,255,255,0.3)'/%3E%3C/svg%3E");
+  --banda-plata: linear-gradient(
+    108deg,
+    transparent 0 30%,
+    rgba(150, 160, 175, 0.45) 38%,
+    rgba(232, 240, 250, 0.9) 46%,
+    rgba(255, 255, 255, 1) 50%,
+    rgba(232, 240, 250, 0.9) 54%,
+    rgba(150, 160, 175, 0.45) 62%,
+    transparent 70% 100%
+  );
 
-  /* Parallel Pattern: Crosshatch más visible */
-  --pattern-parallel: url("data:image/svg+xml,%3Csvg width='10' height='10' viewBox='0 0 10 10' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 0 L10 0 L10 10 L0 10 Z' fill='none' stroke='rgba(255,255,255,0.6)' stroke-width='1.5'/%3E%3C/svg%3E");
+  --banda-platino: linear-gradient(
+    108deg,
+    transparent 0 26%,
+    rgba(140, 170, 200, 0.4) 36%,
+    rgba(225, 240, 255, 0.95) 46%,
+    rgba(255, 255, 255, 1) 50%,
+    rgba(210, 230, 250, 0.9) 56%,
+    rgba(130, 160, 195, 0.4) 66%,
+    transparent 74% 100%
+  );
 
-  /* QCR 25 Watermark */
-  --qcr-watermark-25: url("data:image/svg+xml,%3Csvg width='200' height='200' viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Ctext x='50%25' y='55%25' font-family='Times New Roman, serif' font-weight='900' font-size='150' fill='rgba(255,255,255,0.95)' stroke='rgba(255,215,0,1)' stroke-width='5' text-anchor='middle' dominant-baseline='middle'%3E25%3C/text%3E%3C/svg%3E");
+  /* --- Tramas fijas --- */
+
+  --tex-puntos: radial-gradient(circle, rgba(255, 255, 255, 0.85) 0 32%, transparent 34%);
+
+  --tex-diagonal: repeating-linear-gradient(
+    -58deg,
+    rgba(255, 255, 255, 0.55) 0 0.4%,
+    rgba(255, 255, 255, 0.12) 0.4% 0.9%,
+    transparent 0.9% 1.7%
+  );
+
+  --tex-rejilla: repeating-linear-gradient(
+      90deg,
+      rgba(255, 255, 255, 0.5) 0 0.3%,
+      transparent 0.3% 1.2%
+    ),
+    repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.4) 0 0.3%, transparent 0.3% 1.2%);
+
+  --tex-paralelo: repeating-linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.55) 0 0.22%,
+    rgba(255, 255, 255, 0.1) 0.22% 0.5%,
+    transparent 0.5% 0.95%
+  );
+
+  --tex-horizontal: repeating-linear-gradient(
+    0deg,
+    rgba(255, 255, 255, 0.6) 0 0.18%,
+    transparent 0.18% 0.6%
+  );
+
+  /* Relieve: luz arriba-izquierda y sombra abajo-derecha, como un grabado. */
+  --tex-relieve: repeating-linear-gradient(
+    135deg,
+    rgba(255, 245, 210, 0.55) 0 0.35%,
+    rgba(0, 0, 0, 0.4) 0.35% 0.8%,
+    transparent 0.8% 2.6%
+  );
+
+  --tex-estrellas: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M15 4 L18 12 L26 12 L19.5 17 L22 25 L15 20 L8 25 L10.5 17 L4 12 L12 12 Z' fill='rgba(255,255,255,0.85)'/%3E%3Cpath d='M45 34 L48 42 L56 42 L49.5 47 L52 55 L45 50 L38 55 L40.5 47 L34 42 L42 42 Z' fill='rgba(255,255,255,0.6)'/%3E%3C/svg%3E");
+
+  --tex-cristal: url("data:image/svg+xml,%3Csvg width='120' height='120' viewBox='0 0 120 120' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' stroke='rgba(255,255,255,0.9)' stroke-width='1.1'%3E%3Cpath d='M0 20 L38 46 L22 92 M38 46 L88 30 L120 66 M38 46 L60 120 M88 30 L104 0 M88 30 L120 12 M22 92 L70 106 L120 66 M70 106 L64 120'/%3E%3C/g%3E%3C/svg%3E");
+
+  --tex-mosaico: repeating-conic-gradient(
+    rgba(255, 255, 255, 0.5) 0% 25%,
+    transparent 0% 50%
+  );
+
+  --tex-hieroglifos: url("data:image/svg+xml,%3Csvg width='34' height='34' viewBox='0 0 34 34' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='rgba(255,235,180,0.85)'%3E%3Crect x='4' y='4' width='2' height='9'/%3E%3Crect x='8' y='6' width='5' height='2'/%3E%3Ccircle cx='23' cy='8' r='2.4'/%3E%3Crect x='21' y='12' width='5' height='2'/%3E%3Cpath d='M5 22 l5 -4 l5 4 l-5 4 Z'/%3E%3Crect x='20' y='21' width='2' height='8'/%3E%3Crect x='24' y='21' width='2' height='8'/%3E%3Crect x='20' y='19' width='6' height='2'/%3E%3C/g%3E%3C/svg%3E");
+
+  --sello-25: url("data:image/svg+xml,%3Csvg width='200' height='120' viewBox='0 0 200 120' xmlns='http://www.w3.org/2000/svg'%3E%3Ctext x='50%25' y='52%25' font-family='Georgia, Times New Roman, serif' font-weight='700' font-size='72' fill='rgba(255,255,255,0.3)' stroke='rgba(255,220,140,0.9)' stroke-width='2' text-anchor='middle' dominant-baseline='middle'%3E25%3C/text%3E%3Ctext x='50%25' y='85%25' font-family='Georgia, serif' font-size='12' letter-spacing='3' fill='rgba(255,220,140,0.75)' text-anchor='middle'%3EANNIVERSARY%3C/text%3E%3C/svg%3E");
 }
 
-/* Base Container */
-.foil-overlay {
+/* =========================================================================
+   ESTRUCTURA
+   ========================================================================= */
+
+/*
+ * Ni `z-index` ni `opacity` aquí: ver la nota de arriba. Al ir posicionado ya
+ * se pinta por encima de la imagen, y las insignias de la carta llevan su
+ * propio z-index, así que siguen quedando delante.
+ */
+.foil {
   position: absolute;
   inset: 0;
   pointer-events: none;
-  z-index: 10;
   border-radius: inherit;
-  mix-blend-mode: var(--foil-blend-mode);
-  opacity: var(--foil-idle-opacity);
-  transition: opacity 0.6s cubic-bezier(0.4, 0, 0.2, 1), filter 0.6s ease;
-  filter: brightness(1.05) contrast(1.05);
 }
 
-.card-container:hover .foil-overlay {
-  opacity: var(--foil-active-opacity);
-  animation-duration: var(--foil-active-speed);
-  filter: brightness(1.15) contrast(1.1);
+.foil-zone {
+  position: absolute;
+  pointer-events: none;
 }
 
-/* =========================================
-   1. QUARTER CENTURY SECRET RARE (QCR)
-   ========================================= */
-.foil-qcr {
-  background-image: 
-    linear-gradient(90deg, transparent 5px, rgba(255, 255, 255, 0.3) 5px, transparent 6px),
-    linear-gradient(0deg, transparent 5px, rgba(255, 255, 255, 0.3) 5px, transparent 6px),
-    var(--rainbow-grad);
-  
-  background-size: 6px 6px, 6px 6px, 300% 300%;
-  mix-blend-mode: color-dodge;
-  animation: qcr-rainbow-flow 8s ease infinite; 
-  --foil-idle-opacity: 0.85;
-  --foil-active-opacity: 1;
-}
-
-.foil-qcr::after {
+/* Trama fija de la carta. */
+.foil-zone::before {
   content: '';
   position: absolute;
   inset: 0;
-  background-image: var(--qcr-watermark-25);
+  background-image: var(--tex, none);
+  background-size: var(--tex-size, auto);
+  background-position: center;
+  mix-blend-mode: var(--tex-blend, soft-light);
+  opacity: var(--tex-alpha, 0.5);
+}
+
+/* Banda de luz que recorre la zona. */
+.foil-zone::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: var(--band, none);
+  background-size: 260% 100%;
   background-repeat: no-repeat;
-  background-position: center 85%;
-  background-size: 50% auto;
-  opacity: 1; 
-  filter: drop-shadow(0 0 15px rgba(255, 215, 0, 0.8)) brightness(1.3);
-  animation: qcr-25-glow 4s ease-in-out infinite alternate;
+  mix-blend-mode: var(--band-blend, color-dodge);
+  opacity: var(--band-alpha, 0.55);
+  animation: foil-barrido var(--foil-vel) linear infinite;
 }
 
-@keyframes qcr-rainbow-flow {
-  0% { background-position: 0 0, 0 0, 0% 50%; }
-  50% { background-position: 0 0, 0 0, 100% 50%; }
-  100% { background-position: 0 0, 0 0, 0% 50%; }
+.foil-zone--card {
+  inset: 0;
+  border-radius: inherit;
+  overflow: hidden;
 }
 
-@keyframes qcr-25-glow {
-  0% { filter: drop-shadow(0 0 8px rgba(255, 215, 0, 0.6)) brightness(1.2); }
-  100% { filter: drop-shadow(0 0 20px rgba(255, 215, 0, 1)) brightness(1.6); }
+.foil-zone--art {
+  top: var(--zona-arte-top);
+  right: var(--zona-arte-right);
+  bottom: var(--zona-arte-bottom);
+  left: var(--zona-arte-left);
 }
 
-/* =========================================
-   2. GOLD SECRET RARE (Formerly Premium Gold style)
-   ========================================= */
-.foil-gold-secret {
-  background-image: 
-    repeating-linear-gradient(
-      -45deg,
-      transparent 0px,
-      transparent 2px,
-      rgba(255, 255, 255, 0.7) 3px, 
-      rgba(255, 215, 0, 0.6) 3.5px,
-      transparent 4px,
-      transparent 7px
-    ),
-    linear-gradient(135deg, rgba(166, 124, 0, 0.7) 0%, rgba(255, 223, 64, 0.7) 50%, rgba(166, 124, 0, 0.7) 100%);
-
-  background-size: 200% 200%, 200% 200%;
-  mix-blend-mode: hard-light; 
-  
-  box-shadow: inset 0 0 0 4px rgba(218, 165, 32, 0.6);
-  filter: contrast(1.1) sepia(0.8) saturate(1.3);
-  /* Slower speed because we now traverse back and forth (double distance) */
-  animation: gold-shimmer 12s linear infinite;
-  
-  --foil-idle-opacity: 0.6;
-  --foil-active-opacity: 0.8;
+.foil-zone--name {
+  top: var(--zona-nombre-top);
+  right: var(--zona-nombre-right);
+  bottom: var(--zona-nombre-bottom);
+  left: var(--zona-nombre-left);
 }
 
-@keyframes gold-shimmer {
-  /* Ping-pong for seamless loop */
-  0% { background-position: 0 0, 0% 50%; }
-  50% { background-position: 20px 20px, 100% 50%; }
-  100% { background-position: 0 0, 0% 50%; }
-}
-
-/* =========================================
-   3. PREMIUM GOLD RARE (Hybrid: Gold Glow + Rainbow)
-   ========================================= */
-.foil-premium-gold {
-  /* 1. Rainbow Gradient (Ultra Rare style) */
-  background-image: var(--rainbow-grad);
-  background-size: 200% 200%;
-  
-  /* 2. Gold Glow (Gold Rare style) */
-  box-shadow: 
-    inset 0 0 30px 5px rgba(255, 215, 0, 0.7),  /* Diffuse Gold Inner */
-    inset 0 0 0 2px rgba(218, 165, 32, 0.8);    /* Border definition */
-  
-  mix-blend-mode: color-dodge;
-  
-  /* Smooth linear rainbow movement like Ultra */
-  animation: holo-pan 6s linear infinite;
-  
-  filter: brightness(1.2) saturate(1.3) contrast(1.1);
-  
-  --foil-idle-opacity: 0.7;
-  --foil-active-opacity: 1.0;
-}
-
-/* =========================================
-   4. GOLD RARE (Standard Diffuse)
-   ========================================= */
-.foil-gold {
-  background-image: 
-    linear-gradient(45deg, transparent 40%, rgba(255, 255, 255, 0.5) 50%, transparent 60%);
-  background-size: 200% 200%;
+.foil-zone--seal {
+  right: 12%;
+  bottom: 30.5%;
+  width: 24%;
+  height: 9%;
+  background-image: var(--sello-25);
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
   mix-blend-mode: overlay;
-  /* Diffuse large glow */
-  box-shadow: inset 0 0 20px 5px rgba(255, 215, 0, 0.5);
-  animation: gold-pulse 4s ease-in-out infinite alternate;
-  filter: brightness(1.1) saturate(1.5);
-  --foil-idle-opacity: 0.7;
-  --foil-active-opacity: 1.0;
+  opacity: 0.8;
 }
 
-@keyframes gold-pulse {
-  0% { background-position: 0% 0%; box-shadow: inset 0 0 15px 2px rgba(255, 215, 0, 0.4); }
-  100% { background-position: 100% 100%; box-shadow: inset 0 0 50px 10px rgba(255, 215, 0, 1); }
+/* =========================================================================
+   NOMBRE
+   Solo las letras llevan foil. Como no se pueden recortar las letras de un
+   JPEG, la banda va casi transparente: se lee como un destello cruzando el
+   nombre y no como un rectángulo aclarado.
+   ========================================================================= */
+
+.foil-name--silver {
+  --band: var(--banda-plata);
+  --band-alpha: 0.9;
+  --band-blend: lighten;
 }
 
-/* =========================================
-   5. GHOST RARE
-   ========================================= */
-.foil-ghost {
-  background-color: rgba(255, 255, 255, 0.45);
-  background-image: radial-gradient(circle at center, rgba(255,255,255,0.8), transparent 70%);
-  backdrop-filter: grayscale(100%);
-  filter: brightness(1.6) contrast(0.7);
-  mix-blend-mode: hard-light;
-  --foil-idle-opacity: 0.7; 
-  --foil-active-opacity: 0.95;
+.foil-name--gold {
+  --band: var(--banda-oro);
+  --band-alpha: 0.95;
+  --band-blend: lighten;
 }
 
-/* =========================================
-   6. SECRET RARE (Rainbow Lines, Transparent BG)
-   ========================================= */
-.foil-secret {
-  /* Fondo es el arcoíris */
-  background-image: var(--rainbow-grad);
-  background-size: 300% 300%;
-  
-  /* MÁSCARA: Solo muestra las líneas diagonales */
-  -webkit-mask-image: repeating-linear-gradient(
-    -45deg,
-    transparent 0px,
-    transparent 5px,
-    black 5px,
-    black 7px
+.foil-name--platinum {
+  --band: var(--banda-platino);
+  --band-alpha: 0.9;
+  --band-blend: lighten;
+  --tex: var(--tex-cristal);
+  --tex-size: 55% auto;
+  --tex-alpha: 0.25;
+}
+
+.foil-name--rainbow {
+  --band: var(--banda-arcoiris);
+  --band-alpha: 0.9;
+  --band-blend: lighten;
+  --tex: var(--tex-diagonal);
+  --tex-size: 100% 100%;
+  --tex-alpha: 0.18;
+}
+
+/* Prismatic: el nombre no es de un color sólido, va moteado. */
+.foil-name--speckled {
+  --band: var(--banda-arcoiris);
+  --band-alpha: 0.9;
+  --band-blend: lighten;
+  --tex: radial-gradient(circle at 30% 40%, rgba(255, 120, 220, 0.9) 0 22%, transparent 24%),
+    radial-gradient(circle at 70% 65%, rgba(120, 230, 255, 0.9) 0 20%, transparent 22%);
+  --tex-size: 14% 60%, 18% 70%;
+  --tex-blend: color-dodge;
+  --tex-alpha: 0.3;
+}
+
+/* =========================================================================
+   ILUSTRACIÓN
+   ========================================================================= */
+
+/* Super y Ultra: holograma de trama de puntos muy fina. */
+.foil-art--holo {
+  --tex: var(--tex-puntos);
+  --tex-size: 1.5% 1.05%;
+  --tex-blend: color-dodge;
+  --tex-alpha: 0.16;
+  --band: var(--banda-arcoiris);
+  --band-alpha: 0.2;
+}
+
+/* Secret: diagonales finísimas, que al inclinar cortan la luz como un cristal. */
+.foil-art--diagonal {
+  --tex: var(--tex-diagonal);
+  --tex-size: 100% 100%;
+  --tex-blend: color-dodge;
+  --tex-alpha: 0.2;
+  --band: var(--banda-arcoiris);
+  --band-alpha: 0.24;
+}
+
+/* Prismatic: misma familia, pero la trama va en horizontal y vertical. */
+.foil-art--grid {
+  --tex: var(--tex-rejilla);
+  --tex-size: 100% 100%, 100% 100%;
+  --tex-blend: color-dodge;
+  --tex-alpha: 0.18;
+  --band: var(--banda-arcoiris);
+  --band-alpha: 0.24;
+}
+
+/* Ultimate: la única rareza que se nota con el dedo. Relieve, sin diagonales. */
+.foil-art--emboss {
+  --tex: var(--tex-relieve);
+  --tex-size: 100% 100%;
+  --tex-blend: overlay;
+  --tex-alpha: 0.55;
+  --band: var(--banda-oro);
+  --band-alpha: 0.35;
+  --band-blend: overlay;
+}
+
+/* Ghost: el arte sale casi blanco, vaciado, y el color solo asoma por fuera. */
+.foil-art--ghost {
+  --tex: radial-gradient(
+    ellipse at 50% 45%,
+    rgba(255, 255, 255, 0.9) 0%,
+    rgba(255, 255, 255, 0.45) 42%,
+    transparent 70%
   );
-  mask-image: repeating-linear-gradient(
-    -45deg,
-    transparent 0px,
-    transparent 5px,
-    black 5px,
-    black 7px
+  --tex-size: 100% 100%;
+  --tex-blend: screen;
+  --tex-alpha: 0.45;
+  --band: var(--banda-arcoiris);
+  --band-alpha: 0.3;
+  --band-blend: screen;
+}
+
+/*
+ * Collector's: arco iris de mancha de aceite. Lo suyo es que NO tiene una
+ * dirección clara —se compara con una huella dactilar—, de ahí el cónico en
+ * vez de un degradado recto.
+ */
+.foil-art--oilslick {
+  --tex: conic-gradient(
+    from 210deg at 38% 62%,
+    rgba(255, 90, 200, 0.7),
+    rgba(90, 210, 255, 0.7),
+    rgba(150, 255, 180, 0.7),
+    rgba(255, 225, 100, 0.7),
+    rgba(180, 120, 255, 0.7),
+    rgba(255, 90, 200, 0.7)
   );
-
-  mix-blend-mode: color-dodge;
-  /* Slower speed to maintain velocity over the new back-and-forth loop */
-  animation: secret-flow-lines 8s linear infinite;
-  
-  /* Alto contraste para que las líneas brillen */
-  filter: brightness(1.8) contrast(1.5) saturate(2.0);
-  
-  --foil-idle-opacity: 0.5;
-  --foil-active-opacity: 0.9;
+  --tex-size: 150% 150%;
+  --tex-blend: color-dodge;
+  --tex-alpha: 0.22;
+  --band: var(--banda-plata);
+  --band-alpha: 0.2;
 }
 
-@keyframes secret-flow-lines {
-  /* Ping-pong for seamless gradient transition */
-  0% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
+.foil-art--gold {
+  --tex: var(--tex-diagonal);
+  --tex-size: 100% 100%;
+  --tex-blend: overlay;
+  --tex-alpha: 0.22;
+  --band: var(--banda-oro);
+  --band-alpha: 0.45;
+  --band-blend: overlay;
 }
 
-/* =========================================
-   7. ULTIMATE RARE (Dark Chrome Gold Style)
-   ========================================= */
-.foil-ultimate {
-  background-image: 
-    linear-gradient(45deg, transparent 40%, rgba(200, 200, 200, 0.4) 50%, transparent 60%);
-  
-  background-size: 200% 200%;
-  box-shadow: inset 0 0 30px 10px rgba(60, 60, 60, 0.9);
-  mix-blend-mode: hard-light;
-  filter: grayscale(100%) contrast(1.5) brightness(0.9);
-  animation: ultimate-chrome-pulse 6s ease-in-out infinite alternate;
-  
-  --foil-idle-opacity: 0.8; 
-  --foil-active-opacity: 1.0;
+/* Pharaoh's Rare: una Ultra con jeroglíficos diminutos dentro del foil. */
+.foil-art--hieroglyph {
+  --tex: var(--tex-hieroglifos);
+  --tex-size: 11% auto;
+  --tex-blend: color-dodge;
+  --tex-alpha: 0.28;
+  --band: var(--banda-oro);
+  --band-alpha: 0.4;
 }
 
-@keyframes ultimate-chrome-pulse {
-  0% { 
-    background-position: 0% 0%; 
-    box-shadow: inset 0 0 20px 5px rgba(60, 60, 60, 0.7); 
-  }
-  100% { 
-    background-position: 100% 100%; 
-    box-shadow: inset 0 0 60px 15px rgba(0, 0, 0, 1); 
-  }
+/* =========================================================================
+   TODA LA CARTA
+   ========================================================================= */
+
+.foil-card--parallel {
+  --tex: var(--tex-paralelo);
+  --tex-size: 100% 100%;
+  --tex-blend: soft-light;
+  --tex-alpha: 0.45;
+  --band: var(--banda-plata);
+  --band-alpha: 0.22;
+  --band-blend: soft-light;
 }
 
-/* =========================================
-   STANDARD FOILS & PATTERNS
-   ========================================= */
-
-/* MOSAIC RARE: High Visibility Boost */
-.foil-mosaic {
-  background-image: var(--pattern-mosaic);
-  background-size: 40px 40px;
-  mix-blend-mode: color-dodge; 
-  animation: mosaic-pan var(--pattern-speed) linear infinite;
-  filter: brightness(1.4) contrast(1.2);
-  --foil-idle-opacity: 0.6; 
-  --foil-active-opacity: 0.9;
+.foil-card--starlight {
+  --tex: var(--tex-horizontal);
+  --tex-size: 100% 100%;
+  --tex-blend: color-dodge;
+  --tex-alpha: 0.22;
+  --band: var(--banda-arcoiris);
+  --band-alpha: 0.26;
 }
 
-@keyframes mosaic-pan {
-  0% { background-position: 0 0; }
-  100% { background-position: 40px 40px; }
+.foil-card--platinum {
+  --tex: var(--tex-cristal);
+  --tex-size: 38% auto;
+  --tex-blend: overlay;
+  --tex-alpha: 0.3;
+  --band: var(--banda-platino);
+  --band-alpha: 0.28;
+  --band-blend: overlay;
 }
 
-/* STARFOIL: High Visibility Boost */
-.foil-starfoil {
-  background-image: var(--pattern-starfoil), linear-gradient(to bottom, transparent, rgba(255,255,255,0.2));
-  background-size: 50px 50px, 100% 100%;
-  mix-blend-mode: color-dodge; 
-  animation: star-pan var(--pattern-speed) linear infinite;
-  filter: brightness(1.3) contrast(1.1);
-  --foil-idle-opacity: 0.6;
-  --foil-active-opacity: 0.9;
+.foil-card--qcr {
+  --tex: var(--tex-paralelo);
+  --tex-size: 100% 100%;
+  --tex-blend: color-dodge;
+  --tex-alpha: 0.18;
+  --band: var(--banda-arcoiris);
+  --band-alpha: 0.3;
 }
 
-@keyframes star-pan {
-  0% { background-position: 0 0, 0 0; }
-  100% { background-position: 50px 50px, 0 0; }
+.foil-card--stars {
+  --tex: var(--tex-estrellas);
+  --tex-size: 15% auto;
+  --tex-blend: soft-light;
+  --tex-alpha: 0.6;
+  --band: var(--banda-plata);
+  --band-alpha: 0.2;
+  --band-blend: soft-light;
 }
 
-/* PARALLEL RARE: High Visibility Boost */
-.foil-parallel {
-  background-image: 
-    var(--pattern-parallel),
-    linear-gradient(to bottom, transparent 30%, rgba(255,255,255,0.6) 50%, transparent 70%);
-  background-size: 10px 10px, 100% 200%;
-  mix-blend-mode: hard-light; 
-  filter: contrast(1.4) brightness(1.2);
-  animation: parallel-shift var(--pattern-speed) linear infinite;
-  --foil-idle-opacity: 0.5;
-  --foil-active-opacity: 0.85;
+.foil-card--mosaic {
+  --tex: var(--tex-mosaico);
+  --tex-size: 3.2% 2.2%;
+  --tex-blend: soft-light;
+  --tex-alpha: 0.5;
+  --band: var(--banda-plata);
+  --band-alpha: 0.2;
+  --band-blend: soft-light;
 }
 
-@keyframes parallel-shift {
-  0% { background-position: 0 0, 0% 0%; }
-  100% { background-position: 10px 10px, 0% 100%; }
+.foil-card--shatter {
+  --tex: var(--tex-cristal);
+  --tex-size: 40% auto;
+  --tex-blend: soft-light;
+  --tex-alpha: 0.6;
+  --band: var(--banda-plata);
+  --band-alpha: 0.22;
+  --band-blend: soft-light;
 }
 
+.foil-card--gold {
+  --tex: none;
+  --band: var(--banda-oro);
+  --band-alpha: 0.3;
+  --band-blend: soft-light;
+}
 
-.foil-shatterfoil {
-  background-image: var(--pattern-shatter);
-  background-size: 80px 80px;
+/* =========================================================================
+   RELIEVE Y REFLEJO
+   ========================================================================= */
+
+/* Ultimate, Premium Gold y Collector's llevan el marco resaltado. */
+.foil-emboss {
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 234, 175, 0.45),
+    inset 0 0 4px rgba(255, 242, 205, 0.35),
+    inset 0 0 16px rgba(0, 0, 0, 0.35);
   mix-blend-mode: overlay;
-  animation: shatter-shift 12s linear infinite;
-  filter: contrast(1.1);
 }
 
-@keyframes shatter-shift {
-  0% { background-position: 0 0; }
-  100% { background-position: 80px 40px; }
+.foil-emboss::before,
+.foil-emboss::after {
+  content: none;
 }
 
-/* ULTRA RARE: MAX INTENSITY */
-.foil-ultra {
-  background-image: var(--rainbow-grad);
-  background-size: 200% 200%;
-  mix-blend-mode: color-dodge;
-  filter: brightness(1.5) contrast(1.4) saturate(1.8);
-  animation: holo-pan 6s linear infinite;
-  box-shadow: inset 0 0 15px rgba(255, 215, 0, 0.7);
-  --foil-idle-opacity: 0.75;
-  --foil-active-opacity: 1.0;
+/*
+ * Reflejo que sigue al cursor. En reposo no se ve: una carta quieta bajo una
+ * luz fija tampoco destella. Las variables las escribe el componente.
+ */
+.foil-glare::before {
+  content: none;
 }
 
-/* SUPER RARE: SILVER ULTRA (No Rainbow) */
-.foil-super {
-  /* Silver/White Intense Gradient */
-  background-image: linear-gradient(
-    115deg, 
-    transparent 20%, 
-    rgba(255, 255, 255, 0.5) 40%, 
-    rgba(255, 255, 255, 0.95) 50%, 
-    rgba(255, 255, 255, 0.5) 60%, 
-    transparent 80%
+.foil-glare::after {
+  background-image: radial-gradient(
+    circle at var(--foil-x, 50%) var(--foil-y, 50%),
+    rgba(255, 255, 255, 0.7) 0%,
+    rgba(255, 255, 255, 0.2) 16%,
+    transparent 40%
   );
-  
-  background-size: 250% 250%;
-  
-  /* Use color-dodge for strong metallic shine */
+  background-size: 100% 100%;
   mix-blend-mode: color-dodge;
-  
-  /* Boost contrast/brightness for 'Silver' effect */
-  filter: brightness(1.2) contrast(1.2) grayscale(100%);
-  
-  /* Same smooth pan as Ultra */
-  animation: holo-pan 5s linear infinite;
-  
-  --foil-idle-opacity: 0.4;
-  --foil-active-opacity: 0.8;
+  opacity: 0;
+  animation: none;
+  transition: opacity 0.3s ease;
 }
 
-/* RARE: Fixed Abrupt Cutoff */
-.foil-rare {
-  /* Cleaner sheen gradient */
-  background: linear-gradient(135deg, transparent 40%, rgba(255,255,255,0.4) 50%, transparent 60%);
-  background-size: 300% 300%;
-  mix-blend-mode: color-dodge;
-  filter: brightness(1.3);
-  --foil-idle-opacity: 0.0; /* Controlled by keyframe */
-  --foil-active-opacity: 0.7; /* Controlled by keyframe */
-  
-  animation: rare-sheen 5s ease-in-out infinite;
+.card-container:hover .foil-glare::after {
+  opacity: 1;
 }
 
-.foil-platinum {
-  background-image: linear-gradient(135deg, #e0e0e0 0%, #ffffff 50%, #a0a0a0 100%);
-  mix-blend-mode: hard-light;
-  filter: brightness(1.1) contrast(0.95);
-  animation: holo-pan 8s linear infinite;
+/* Con el cursor encima el foil sube, como al girar la carta hacia la luz. */
+.card-container:hover .foil-zone::after {
+  animation-duration: var(--foil-vel-activa);
 }
 
-.foil-starlight {
-  background-image: 
-    linear-gradient(90deg, rgba(255,255,255,0.4) 1px, transparent 1px),
-    linear-gradient(0deg, rgba(255,255,255,0.4) 1px, transparent 1px),
-    var(--rainbow-grad);
-  background-size: 10px 10px, 10px 10px, 200% 200%;
-  mix-blend-mode: color-dodge;
-  /* Double duration to account for ping-pong gradient vs linear grid */
-  animation: starlight-grid 10s linear infinite;
+/* =========================================================================
+   ANIMACIÓN
+   ========================================================================= */
+
+/*
+ * Solo se desplaza la posición del degradado: no hay que recalcular el diseño,
+ * y con cientos de cartas a la vez eso importa.
+ */
+@keyframes foil-barrido {
+  0% { background-position: -80% 50%; }
+  100% { background-position: 180% 50%; }
 }
 
-@keyframes starlight-grid {
-  /* Grid continues linearly (0->10->20), Gradient ping-pongs (0->100->0) */
-  0% { background-position: 0 0, 0 0, 0% 50%; }
-  50% { background-position: 10px 10px, 10px 10px, 100% 50%; }
-  100% { background-position: 20px 20px, 20px 20px, 0% 50%; }
-}
-
-@keyframes holo-pan {
-  0% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
-}
-
-@keyframes rare-sheen {
-  0% { 
-    background-position: 0% 0%; 
-    opacity: 0; 
-  }
-  30% { 
-    opacity: 0.6; /* Peak opacity mid-movement */
-  }
-  70% {
-    opacity: 0; /* Fade out before resetting */
-  }
-  100% { 
-    background-position: 100% 100%; 
-    opacity: 0; 
+/* Quien haya pedido menos movimiento se queda con el foil quieto, no sin él. */
+@media (prefers-reduced-motion: reduce) {
+  .foil-zone::after {
+    animation: none;
+    background-position: 50% 50%;
   }
 }
