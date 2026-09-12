@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useReducer, useCallback, useRef } from 'react';
 import type { Database, Folder, Card, ViewMode, FolderSort, CardSort, ToastData, SortDirection, ThemeConfig, AlbumColumns } from '../types';
-import { ID_ALL, generateId } from '../utils';
+import { ID_ALL, generateId, CARD_BACK_IMG } from '../utils';
 
 // --- State Definition ---
 interface AppState {
@@ -79,7 +79,7 @@ const THEME_STORAGE_KEY = 'yugi-tracker-platinum-theme';
 const createSystemFolder = (): Folder => ({
   id: ID_ALL,
   name: 'Colección Completa',
-  img: 'https://images.ygoprodeck.com/images/cards/back_high.jpg',
+  img: CARD_BACK_IMG,
   align: 'center',
   cardSort: 'type',
   cardSortDir: 'asc',

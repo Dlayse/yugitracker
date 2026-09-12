@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { searchCards, MIN_QUERY_LENGTH } from '../../services/cardService';
 import type { ApiCard, MainCardType, MonsterType, CardProperty } from '../../types';
-import { analyzeCardType, getRarityWeight } from '../../utils';
+import { analyzeCardType, getRarityWeight, CARD_BACK_IMG } from '../../utils';
 import { Search, Loader2, X, Filter } from 'lucide-react';
 import { CardFilter } from '../CardFilter';
 
@@ -259,7 +259,7 @@ export const SearchModal: React.FC<Props> = ({ isOpen, onClose, onSelect }) => {
                         >
                             {/* SAFE IMAGE ACCESS */}
                             <img 
-                                src={card.card_images?.[0]?.image_url_small || 'https://images.ygoprodeck.com/images/cards/back_high.jpg'} 
+                                src={card.card_images?.[0]?.image_url_small || CARD_BACK_IMG} 
                                 className="w-10 h-14 object-cover rounded shadow-sm bg-black/20" 
                                 alt="" 
                             />

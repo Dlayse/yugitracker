@@ -1,7 +1,7 @@
 import React from 'react';
 import type { Folder, ViewMode } from '../types';
 import { useStore } from '../context/StoreContext';
-import { formatMoney, ID_ALL } from '../utils';
+import { formatMoney, ID_ALL, CARD_BACK_IMG } from '../utils';
 import { Settings, CheckCircle2, Circle } from 'lucide-react';
 import { motion } from 'framer-motion';
 
@@ -129,7 +129,7 @@ export const FolderItem: React.FC<Props> = React.memo(({ folder, onEdit, viewMod
             
             <div className={`relative w-16 h-full shrink-0 ${isSelectionMode && !isSystem ? 'ml-8' : ''}`}>
                 <img 
-                    src={folder.img} 
+                    src={folder.img || CARD_BACK_IMG} 
                     className={`absolute inset-0 w-full h-full object-cover rounded ${isSelectionMode && isSystem ? 'opacity-50' : ''}`} 
                     style={{ objectPosition: folder.align }} 
                     alt=""
@@ -189,7 +189,7 @@ export const FolderItem: React.FC<Props> = React.memo(({ folder, onEdit, viewMod
             <SelectionOverlay />
 
             <img 
-                src={folder.img} 
+                src={folder.img || CARD_BACK_IMG} 
                 className={`absolute inset-0 w-full h-full object-cover transition-transform duration-500 ease-out ${isSelectionMode ? (isSystem ? 'opacity-50' : '') : 'group-hover:scale-105'}`} 
                 style={{ objectPosition: folder.align }}
                 alt={folder.name}

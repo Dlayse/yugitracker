@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useStore } from '../../context/StoreContext';
 import type { ApiCard, Card, CardSet, CardCondition } from '../../types';
-import { generateId, getCardMarketLink, getRarityColor, ID_ALL, getConditionMeta, analyzeCardType } from '../../utils';
+import { generateId, getCardMarketLink, getRarityColor, ID_ALL, getConditionMeta, analyzeCardType, CARD_BACK_IMG } from '../../utils';
 import { getCardDetails } from '../../services/cardService';
 import { ExternalLink, Check, Loader2, Star, ShieldAlert, Target, Info, Calendar, Database, Sparkles } from 'lucide-react';
 
@@ -335,7 +335,7 @@ export const CardModal: React.FC<Props> = ({ isOpen, onClose, initialApiCard, ex
                     {/* Left Column: Image */}
                     <div className="flex flex-col gap-4">
                         <img 
-                            src={customImg || selectedImg} 
+                            src={customImg || selectedImg || CARD_BACK_IMG} 
                             className={`w-full rounded-xl shadow-2xl aspect-[421/614] object-cover ${formData.isWanted ? 'grayscale brightness-90' : ''}`}
                             alt="Preview"
                         />

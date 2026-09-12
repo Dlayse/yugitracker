@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useStore } from '../../context/StoreContext';
 import type { Folder, FolderAlign } from '../../types';
-import { generateId, ID_ALL, normalizeStr } from '../../utils';
+import { generateId, ID_ALL, normalizeStr, CARD_BACK_IMG } from '../../utils';
 
 interface Props {
   isOpen: boolean;
@@ -104,7 +104,7 @@ export const FolderModal: React.FC<Props> = ({ isOpen, onClose, editId, onSave }
             <label className="block text-sm text-muted mb-2">Vista Previa</label>
             <div className="w-full aspect-video bg-bg-panel rounded-xl overflow-hidden relative border border-border-base">
               <img 
-                src={formData.img || 'https://images.ygoprodeck.com/images/cards/back_high.jpg'} 
+                src={formData.img || CARD_BACK_IMG} 
                 className="w-full h-full object-cover transition-all duration-300"
                 style={{ objectPosition: formData.align }}
                 alt="Preview"

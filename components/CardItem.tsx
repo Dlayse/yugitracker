@@ -2,7 +2,7 @@ import React, { useState, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import type { Card, ViewMode } from '../types';
 import { useStore } from '../context/StoreContext';
-import { formatMoney, getConditionMeta, getRarityColor, ID_ALL } from '../utils';
+import { formatMoney, getConditionMeta, getRarityColor, ID_ALL, onCardImageError } from '../utils';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MessageSquareText, FolderOpen, CheckCircle2, Circle } from 'lucide-react';
 import CardFoilOverlay from './CardFoilOverlay';
@@ -148,7 +148,8 @@ export const CardItem: React.FC<Props> = React.memo(({ card, onPress, viewMode, 
                    {isSelectionMode && <SelectionOverlay />}
                    
                    <img 
-                        src={card.img} 
+                        src={card.img}
+                        onError={onCardImageError} 
                         className={`absolute inset-0 w-full h-full object-cover transition-transform duration-500 ease-out ${card.isWanted ? 'grayscale brightness-75' : ''}`}
                         loading="lazy"
                         alt={card.name}
@@ -189,7 +190,8 @@ export const CardItem: React.FC<Props> = React.memo(({ card, onPress, viewMode, 
             {/* CARD IMAGE */}
             <div className="w-full h-full bg-[#111] relative">
                  <img 
-                    src={card.img} 
+                    src={card.img}
+                        onError={onCardImageError} 
                     className={`w-full h-full object-cover ${isSelectionMode ? '' : 'group-hover:scale-105'} transition-transform duration-500 ${card.isWanted ? 'grayscale brightness-75' : ''}`}
                     loading="lazy"
                     alt={card.name}
@@ -295,7 +297,8 @@ export const CardItem: React.FC<Props> = React.memo(({ card, onPress, viewMode, 
                     onMouseLeave={() => setHoverPos(null)}
                 >
                     <img 
-                        src={card.img} 
+                        src={card.img}
+                        onError={onCardImageError} 
                         className={`absolute inset-0 w-full h-full object-cover ${isSelectionMode ? 'grayscale-[0.5]' : ''} ${card.isWanted ? 'grayscale brightness-75' : ''}`}
                         alt="" 
                         loading="lazy"
@@ -389,7 +392,8 @@ export const CardItem: React.FC<Props> = React.memo(({ card, onPress, viewMode, 
                             className="fixed z-[9999] w-72 rounded-xl shadow-2xl border-4 border-bg-panel bg-black pointer-events-none overflow-hidden"
                             style={{ top: hoverPos.top, left: hoverPos.left }}
                         >
-                            <img src={card.img} className={`w-full h-auto object-contain bg-black ${card.isWanted ? 'grayscale' : ''}`} alt="Zoom" />
+                            <img src={card.img}
+                        onError={onCardImageError} className={`w-full h-auto object-contain bg-black ${card.isWanted ? 'grayscale' : ''}`} alt="Zoom" />
                             <div className="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-black/90 to-transparent">
                                 <div className="text-xs text-white text-center font-medium">{card.name}</div>
                             </div>
@@ -434,7 +438,8 @@ export const CardItem: React.FC<Props> = React.memo(({ card, onPress, viewMode, 
                 {isSelectionMode && <SelectionOverlay />}
 
                 <img 
-                    src={card.img} 
+                    src={card.img}
+                        onError={onCardImageError} 
                     className={`absolute inset-0 w-full h-full object-cover transition-transform duration-500 ease-out relative z-10 ${isSelectionMode ? '' : 'group-hover:scale-110'} ${card.isWanted ? 'grayscale brightness-75' : ''}`} 
                     loading="lazy" 
                     decoding="async"

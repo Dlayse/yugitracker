@@ -1,6 +1,21 @@
+import type React from 'react';
 import type { Database, MainCardType, MonsterType, CardProperty } from './types';
 
 export const ID_ALL = 'ALL_CARDS_SYSTEM';
+
+/** Reverso de carta: portada por defecto y recambio si una imagen no carga. */
+export const CARD_BACK_IMG = 'https://images.ygoprodeck.com/images/cards/back_high.jpg';
+
+/**
+ * Si la imagen de una carta falla (enlace roto, arte personalizado que ya no
+ * existe, sin conexión) se pone el reverso en su lugar. Sin esto quedaba un
+ * hueco vacío y la cuadrícula se descuadraba.
+ */
+export const onCardImageError = (e: React.SyntheticEvent<HTMLImageElement>) => {
+  const img = e.currentTarget;
+  if (img.src === CARD_BACK_IMG) return; // Evita un bucle si el reverso tampoco carga.
+  img.src = CARD_BACK_IMG;
+};
 
 /**
  * Identificador único de carta o carpeta.

@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useStore } from '../context/StoreContext';
-import { ID_ALL, exportData } from '../utils';
+import { ID_ALL, exportData, CARD_BACK_IMG } from '../utils';
 import { Search, ChevronLeft, Download, Upload, Grid, List, Hash, ArrowUp, ArrowDown, Palette, Trash, Filter, BookOpen, Sparkles, Stamp, Award, Target, Monitor } from 'lucide-react';
 import { TagsPanel } from './TagsPanel';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -157,7 +157,7 @@ export const Header: React.FC<Props> = ({
                     
                     {currentFolder && (
                          <img 
-                            src={currentFolder.img} 
+                            src={currentFolder.img || CARD_BACK_IMG} 
                             className="w-8 h-8 rounded-md object-cover shadow-sm shrink-0" 
                             style={{ objectPosition: currentFolder.align }}
                             alt=""
@@ -241,10 +241,10 @@ export const Header: React.FC<Props> = ({
                 >
                     <Sparkles size={16} fill={showFoils ? 'currentColor' : 'none'} />
                 </button>
-                <button onClick={() => exportData(state.db)} className="p-1.5 hover:text-main text-main/60 hover:bg-main/10 rounded transition-colors" title="Export">
+                <button onClick={() => exportData(state.db)} className="p-1.5 hover:text-main text-main/60 hover:bg-main/10 rounded transition-colors" title="Exportar copia de seguridad">
                     <Download size={16} />
                 </button>
-                <label className="p-1.5 hover:text-main text-main/60 hover:bg-main/10 rounded transition-colors cursor-pointer" title="Import">
+                <label className="p-1.5 hover:text-main text-main/60 hover:bg-main/10 rounded transition-colors cursor-pointer" title="Importar copia de seguridad">
                     <Upload size={16} />
                     <input type="file" className="hidden" onChange={onImport} />
                 </label>
