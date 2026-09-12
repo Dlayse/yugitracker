@@ -107,16 +107,22 @@
    * brillo metálico. Que es exactamente como se comporta la tinta metalizada
    * de verdad.
    */
+  /*
+   * Los tonos medios se mantienen POR DEBAJO del marco de la carta en los tres
+   * canales, y solo el pico lo supera. Con `lighten` cualquier canal que se
+   * pase reemplaza al del marco: con un plateado medio, el azul subía y el
+   * plato del nombre se enfriaba a gris. Por eso el destello es estrecho.
+   */
   --nombre-oro: repeating-linear-gradient(
     105deg,
-    #140e04 0 7%, #4d370d 9.5%, #b98b28 11.4%, #ffeaa9 12.4%,
-    #b98b28 13.4%, #4d370d 15.3%, #140e04 18% 25%
+    #140e04 0 9%, #3d2c0b 11%, #8a6618 12.2%, #ffeaa9 12.8%,
+    #8a6618 13.4%, #3d2c0b 14.6%, #140e04 16.5% 25%
   );
 
   --nombre-plata: repeating-linear-gradient(
     105deg,
-    #0d1014 0 7%, #39434d 9.5%, #97a4b2 11.4%, #ffffff 12.4%,
-    #97a4b2 13.4%, #39434d 15.3%, #0d1014 18% 25%
+    #0d1014 0 9%, #2b3138 11%, #5f666d 12.2%, #ffffff 12.8%,
+    #5f666d 13.4%, #2b3138 14.6%, #0d1014 16.5% 25%
   );
 
   --nombre-arcoiris: repeating-linear-gradient(
@@ -263,8 +269,13 @@
   right: var(--zona-nombre-right);
   bottom: var(--zona-nombre-bottom);
   left: var(--zona-nombre-left);
-  -webkit-mask-image: linear-gradient(to right, transparent, #000 7%, #000 93%, transparent);
-  mask-image: linear-gradient(to right, transparent, #000 7%, #000 93%, transparent);
+  /*
+   * SIN máscara. Una `mask` crea contexto de apilamiento igual que un
+   * `transform`, y eso aislaba la mezcla: el `lighten` dejaba de ver la carta y
+   * el degradado oscuro del nombre se pintaba tal cual, como una barra negra.
+   * No hace falta para disimular el borde del rectángulo: con `lighten`, lo
+   * oscuro no altera nada, así que el recuadro es invisible por sí solo.
+   */
 }
 
 .foil-zone--name::before {
