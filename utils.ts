@@ -1,8 +1,22 @@
-import type { MainCardType, MonsterType, CardProperty } from './types';
+import type { Database, MainCardType, MonsterType, CardProperty } from './types';
 
 export const ID_ALL = 'ALL_CARDS_SYSTEM';
 
-export const generateId = (): string => Math.random().toString(36).substr(2, 9);
+/**
+ * Identificador único de carta o carpeta.
+ *
+ * Antes eran 9 caracteres de `Math.random()`, que con una colección grande
+ * acaba repitiendo alguno: dos cartas con el mismo id se pisan al editar y se
+ * borran juntas. `randomUUID` lo descarta y está disponible en cualquier
+ * navegador actual sirviendo por HTTPS o en localhost; el resto cae al método
+ * antiguo, pero con el doble de entropía.
+ */
+export const generateId = (): string => {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID();
+  }
+  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 11)}`;
+};
 
 export const formatMoney = (val: number): string => {
   return new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(val);
@@ -283,20 +297,23 @@ export const getCardMarketLink = (name: string): string => {
   return `https://www.cardmarket.com/es/YuGiOh/Cards/${clean}${params}`;
 };
 
-export const debounce = <T extends (...args: any[]) => void>(fn: T, ms: number) => {
-  let timeoutId: ReturnType<typeof setTimeout>;
-  return (...args: Parameters<T>) => {
-    clearTimeout(timeoutId);
-    timeoutId = setTimeout(() => fn(...args), ms);
-  };
-};
+/**
+ * Descarga la colección como copia de seguridad en JSON.
+ *
+ * Se usa un Blob y no una URL `data:`: con una colección grande esa cadena
+ * llega a varios megas y algunos navegadores cortan la descarga por longitud
+ * de URL, justo cuando la copia es más necesaria.
+ */
+export const exportData = (data: Database) => {
+  const blob = new Blob([JSON.stringify(data)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
 
-export const exportData = (data: any) => {
-  const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(data));
-  const dlAnchorElem = document.createElement('a');
-  dlAnchorElem.setAttribute("href", dataStr);
-  dlAnchorElem.setAttribute("download", `yugi_collection_backup_${new Date().toISOString().slice(0,10)}.json`);
-  document.body.appendChild(dlAnchorElem);
-  dlAnchorElem.click();
-  dlAnchorElem.remove();
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `yugi_collection_backup_${new Date().toISOString().slice(0, 10)}.json`;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+
+  URL.revokeObjectURL(url);
 };

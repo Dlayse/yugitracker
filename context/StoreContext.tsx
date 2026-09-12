@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useReducer, useCallback } from 'react';
+import React, { createContext, useContext, useEffect, useReducer, useCallback, useRef } from 'react';
 import type { Database, Folder, Card, ViewMode, FolderSort, CardSort, ToastData, SortDirection, ThemeConfig, AlbumColumns } from '../types';
 import { ID_ALL, generateId } from '../utils';
 
@@ -71,6 +71,43 @@ const DEFAULT_THEME: ThemeConfig = {
     bgPanel: '39 39 42',
     isDark: true
 };
+
+const DB_STORAGE_KEY = 'yugi-tracker-platinum-db';
+const THEME_STORAGE_KEY = 'yugi-tracker-platinum-theme';
+
+/** La carpeta de sistema siempre existe y reúne todas las cartas. */
+const createSystemFolder = (): Folder => ({
+  id: ID_ALL,
+  name: 'Colección Completa',
+  img: 'https://images.ygoprodeck.com/images/cards/back_high.jpg',
+  align: 'center',
+  cardSort: 'type',
+  cardSortDir: 'asc',
+});
+
+const createEmptyDatabase = (): Database => ({
+  folders: [createSystemFolder()],
+  cards: [],
+  customArts: {},
+});
+
+/**
+ * Valida lo que había guardado antes de usarlo. Si el JSON está a medias o le
+ * faltan las listas se devuelve `null` y se empieza de cero, en vez de dejar
+ * que un `undefined.find(...)` tumbe la aplicación al arrancar.
+ */
+function parseDatabase(raw: string): Database | null {
+  const json: unknown = JSON.parse(raw);
+  if (!json || typeof json !== 'object') return null;
+
+  const candidate = json as Partial<Database>;
+  if (!Array.isArray(candidate.folders) || !Array.isArray(candidate.cards)) return null;
+
+  const folders = [...candidate.folders];
+  if (!folders.some((f) => f.id === ID_ALL)) folders.unshift(createSystemFolder());
+
+  return { folders, cards: candidate.cards, customArts: candidate.customArts ?? {} };
+}
 
 const INITIAL_STATE: AppState = {
   db: { folders: [], cards: [], customArts: {} },
@@ -348,91 +385,98 @@ const reducer = (state: AppState, action: Action): AppState => {
 // --- Context ---
 const StoreContext = createContext<{ state: AppState; dispatch: React.Dispatch<Action>; toast: (msg: string, type?: 'ok'|'err', onUndo?: () => void) => void } | undefined>(undefined);
 
-export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [state, dispatch] = useReducer(reducer, INITIAL_STATE);
+/**
+ * Estado de arranque, ya con lo que hubiera guardado en el navegador.
+ *
+ * Se lee aquí y no en un `useEffect` a propósito: así el primer render ya sale
+ * con la colección puesta (sin el parpadeo de una pantalla vacía) y no hace
+ * falta una bandera que impida guardar antes de haber leído.
+ */
+function createInitialState(): AppState {
+  let db = createEmptyDatabase();
+  try {
+    const saved = localStorage.getItem(DB_STORAGE_KEY);
+    if (saved) db = parseDatabase(saved) ?? db;
+  } catch (e) {
+    console.error('No se pudo leer la colección guardada:', e);
+  }
 
-  // Persistence (Auto-Load / Auto-Save)
-  useEffect(() => {
-    const saved = localStorage.getItem('yugi-tracker-platinum-db');
-    if (saved) {
-      try {
-        const json = JSON.parse(saved);
-        // Ensure SYSTEM folder exists and has sort props
-        if (!json.folders.find((f: Folder) => f.id === ID_ALL)) {
-           json.folders.unshift({ 
-               id: ID_ALL, 
-               name: 'Colección Completa', 
-               img: 'https://images.ygoprodeck.com/images/cards/back_high.jpg', 
-               align: 'center',
-               cardSort: 'type',
-               cardSortDir: 'asc'
-           });
-        }
-        dispatch({ type: 'INIT_DB', payload: json });
-      } catch (e) { console.error(e); }
-    } else {
-        // First Time Init
-        dispatch({ type: 'INIT_DB', payload: { 
-            folders: [{ 
-                id: ID_ALL, 
-                name: 'Colección Completa', 
-                img: 'https://images.ygoprodeck.com/images/cards/back_high.jpg', 
-                align: 'center',
-                cardSort: 'type',
-                cardSortDir: 'asc'
-            }], 
-            cards: [],
-            customArts: {}
-        } });
-    }
-    
-    const savedTheme = localStorage.getItem('yugi-tracker-platinum-theme');
-    if (savedTheme) {
-        try {
-            const theme = JSON.parse(savedTheme);
-            dispatch({ type: 'SET_THEME', payload: theme });
-        } catch (e) { console.error(e); }
-    }
+  let theme = DEFAULT_THEME;
+  try {
+    const savedTheme = localStorage.getItem(THEME_STORAGE_KEY);
+    // Se mezcla sobre el tema por defecto para que un tema viejo al que le
+    // falte algún campo no deje colores sin definir.
+    if (savedTheme) theme = { ...DEFAULT_THEME, ...(JSON.parse(savedTheme) as Partial<ThemeConfig>) };
+  } catch (e) {
+    console.error('No se pudo leer el tema guardado:', e);
+  }
+
+  return { db, ui: { ...INITIAL_STATE.ui, theme } };
+}
+
+export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [state, dispatch] = useReducer(reducer, undefined, createInitialState);
+
+  const toast = useCallback((msg: string, type: 'ok' | 'err' = 'ok', onUndo?: () => void) => {
+    const id = generateId();
+    dispatch({ type: 'ADD_TOAST', payload: { id, msg, type, onUndo } });
+    // Los avisos con "Deshacer" duran más para dar tiempo a reaccionar.
+    const ms = onUndo ? 5000 : 3000;
+    setTimeout(() => dispatch({ type: 'REMOVE_TOAST', payload: id }), ms);
   }, []);
 
+  // El aviso de almacenamiento lleno se da una sola vez por sesión; si no,
+  // saldría en cada pulsación.
+  const quotaWarned = useRef(false);
+
+  /*
+   * Guardado automático. Antes estaba condicionado a que hubiera al menos una
+   * carpeta o una carta, así que al vaciar la colección no se llegaba a
+   * escribir nada y lo borrado reaparecía al recargar.
+   */
   useEffect(() => {
-    if (state.db.folders.length > 0 || state.db.cards.length > 0) {
-      localStorage.setItem('yugi-tracker-platinum-db', JSON.stringify(state.db));
+    try {
+      localStorage.setItem(DB_STORAGE_KEY, JSON.stringify(state.db));
+    } catch (e) {
+      /*
+       * Se llega aquí sobre todo al topar con el límite del navegador (unos
+       * 5 MB), que se alcanza con muchas cartas y portadas personalizadas.
+       * Antes el fallo pasaba desapercibido y se perdía lo último añadido.
+       */
+      console.error('No se pudo guardar la colección:', e);
+      if (!quotaWarned.current) {
+        quotaWarned.current = true;
+        toast('No se pudo guardar: almacenamiento lleno. Exporta una copia.', 'err');
+      }
     }
-  }, [state.db]);
-  
+  }, [state.db, toast]);
+
   useEffect(() => {
-      localStorage.setItem('yugi-tracker-platinum-theme', JSON.stringify(state.ui.theme));
-      
+      try {
+        localStorage.setItem(THEME_STORAGE_KEY, JSON.stringify(state.ui.theme));
+      } catch (e) {
+        console.error('No se pudo guardar el tema:', e);
+      }
+
       const root = document.documentElement;
-      root.style.setProperty('--color-primary', state.ui.theme.primary);
-      root.style.setProperty('--color-bg-body', state.ui.theme.bgBody);
-      root.style.setProperty('--color-bg-surface', state.ui.theme.bgSurface);
-      root.style.setProperty('--color-bg-panel', state.ui.theme.bgPanel);
+      root.style.setProperty('--rgb-primary', state.ui.theme.primary);
+      root.style.setProperty('--rgb-bg-body', state.ui.theme.bgBody);
+      root.style.setProperty('--rgb-bg-surface', state.ui.theme.bgSurface);
+      root.style.setProperty('--rgb-bg-panel', state.ui.theme.bgPanel);
       
       if (state.ui.theme.isDark) {
-          root.style.setProperty('--color-text-main', '255 255 255');
-          root.style.setProperty('--color-text-muted', '156 163 175');
-          root.style.setProperty('--color-text-sub', '107 114 128');
+          root.style.setProperty('--rgb-text-main', '255 255 255');
+          root.style.setProperty('--rgb-text-muted', '156 163 175');
+          root.style.setProperty('--rgb-text-sub', '107 114 128');
           root.classList.add('dark');
       } else {
-          root.style.setProperty('--color-text-main', '20 20 20');
-          root.style.setProperty('--color-text-muted', '75 85 99');
-          root.style.setProperty('--color-text-sub', '107 114 128');
+          root.style.setProperty('--rgb-text-main', '20 20 20');
+          root.style.setProperty('--rgb-text-muted', '75 85 99');
+          root.style.setProperty('--rgb-text-sub', '107 114 128');
           root.classList.remove('dark');
       }
 
   }, [state.ui.theme]);
-
-  const toast = useCallback((msg: string, type: 'ok'|'err' = 'ok', onUndo?: () => void) => {
-    const id = generateId();
-    dispatch({ type: 'ADD_TOAST', payload: { id, msg, type, onUndo } });
-    if (!onUndo) {
-        setTimeout(() => dispatch({ type: 'REMOVE_TOAST', payload: id }), 3000);
-    } else {
-        setTimeout(() => dispatch({ type: 'REMOVE_TOAST', payload: id }), 5000);
-    }
-  }, []);
 
   return (
     <StoreContext.Provider value={{ state, dispatch, toast }}>

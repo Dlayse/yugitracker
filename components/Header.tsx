@@ -4,6 +4,7 @@ import { ID_ALL, exportData } from '../utils';
 import { Search, ChevronLeft, Download, Upload, Grid, List, Hash, ArrowUp, ArrowDown, Palette, Trash, Filter, BookOpen, Sparkles, Stamp, Award, Target, Monitor } from 'lucide-react';
 import { TagsPanel } from './TagsPanel';
 import { motion, AnimatePresence } from 'framer-motion';
+import type { FolderSort, CardSort } from '../types';
 
 interface Props {
   onOpenFolderModal: () => void;
@@ -35,7 +36,7 @@ export const Header: React.FC<Props> = ({
   
   // Ref for the slider container to attach non-passive wheel listener
   const sliderRef = useRef<HTMLDivElement>(null);
-  const commitTimeoutRef = useRef<any>(null);
+  const commitTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Local state for smooth slider
   const [localGridSize, setLocalGridSize] = useState(gridSize);
@@ -134,12 +135,12 @@ export const Header: React.FC<Props> = ({
         >
             <div className="absolute inset-0 -translate-x-[150%] group-hover:translate-x-[150%] bg-gradient-to-r from-transparent via-white/25 to-transparent skew-x-[-25deg] transition-transform duration-1000 ease-in-out z-10 pointer-events-none" />
 
-            <h1 className="text-lg font-bold tracking-tight hidden sm:block relative z-0 text-main transition-all duration-500 group-hover:text-white group-hover:drop-shadow-[0_0_12px_rgba(var(--color-primary),0.6)]">
+            <h1 className="text-lg font-bold tracking-tight hidden sm:block relative z-0 text-main transition-all duration-500 group-hover:text-white group-hover:drop-shadow-[0_0_12px_rgba(var(--rgb-primary),0.6)]">
                 Yugi-Tracker <span className="text-primary transition-all duration-500 group-hover:brightness-125">Platinum</span>
             </h1>
 
             <h1 className="text-lg font-bold tracking-tight sm:hidden relative z-0 transition-transform duration-300 group-hover:scale-105">
-                <span className="text-primary group-hover:drop-shadow-[0_0_8px_rgba(var(--color-primary),0.8)]">YT</span>
+                <span className="text-primary group-hover:drop-shadow-[0_0_8px_rgba(var(--rgb-primary),0.8)]">YT</span>
             </h1>
         </div>
 
@@ -302,7 +303,7 @@ export const Header: React.FC<Props> = ({
                         <select 
                             className="bg-transparent text-main text-sm px-2 py-1.5 border-none focus:ring-0 cursor-pointer hover:text-primary transition-colors outline-none"
                             value={sortFolders}
-                            onChange={(e) => dispatch({ type: 'SET_FOLDER_SORT', payload: e.target.value as any })}
+                            onChange={(e) => dispatch({ type: 'SET_FOLDER_SORT', payload: e.target.value as FolderSort })}
                         >
                             <option value="manual" className="bg-bg-panel text-main">✋ Manual</option>
                             <option value="name" className="bg-bg-panel text-main">Aa Nombre</option>
@@ -356,7 +357,7 @@ export const Header: React.FC<Props> = ({
                         <select 
                             className="bg-transparent text-main text-sm px-2 py-1.5 border-none focus:ring-0 cursor-pointer hover:text-primary transition-colors outline-none"
                             value={sortCards}
-                            onChange={(e) => dispatch({ type: 'SET_CARD_SORT', payload: e.target.value as any })}
+                            onChange={(e) => dispatch({ type: 'SET_CARD_SORT', payload: e.target.value as CardSort })}
                         >
                             <option value="manual" className="bg-bg-panel text-main">✋ Manual</option>
                             <option value="type" className="bg-bg-panel text-main">⚔️ Tipo</option>

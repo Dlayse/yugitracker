@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useStore } from '../../context/StoreContext';
 import { X, Check, Pipette, Sparkles, Save, PaintBucket, LayoutTemplate } from 'lucide-react';
@@ -13,6 +13,24 @@ interface CustomColor {
     id: string;
     name: string;
     hex: string;
+}
+
+const CUSTOM_THEMES_KEY = 'yugi-tracker-custom-themes';
+
+/** Colores guardados por el usuario. Ante cualquier problema, listas vacías. */
+function readCustomColors(): { accents: CustomColor[]; bgs: CustomColor[] } {
+    try {
+        const stored = localStorage.getItem(CUSTOM_THEMES_KEY);
+        if (!stored) return { accents: [], bgs: [] };
+        const parsed = JSON.parse(stored) as { accents?: CustomColor[]; bgs?: CustomColor[] };
+        return {
+            accents: Array.isArray(parsed.accents) ? parsed.accents : [],
+            bgs: Array.isArray(parsed.bgs) ? parsed.bgs : [],
+        };
+    } catch (e) {
+        console.error('No se pudieron leer los colores personalizados:', e);
+        return { accents: [], bgs: [] };
+    }
 }
 
 // --- PALETTE DATA ---
@@ -74,21 +92,20 @@ export const ThemeModal: React.FC<Props> = ({ isOpen, onClose }) => {
   const [customBg, setCustomBg] = useState('#050507');
   const [bgName, setBgName] = useState('');
 
-  // Persistent Custom Lists
-  const [savedAccents, setSavedAccents] = useState<CustomColor[]>([]);
-  const [savedBgs, setSavedBgs] = useState<CustomColor[]>([]);
-
-  useEffect(() => {
-      const stored = localStorage.getItem('yugi-tracker-custom-themes');
-      if (stored) {
-          const parsed = JSON.parse(stored);
-          setSavedAccents(parsed.accents || []);
-          setSavedBgs(parsed.bgs || []);
-      }
-  }, []);
+  /*
+   * Colores guardados por el usuario. Se leen en el inicializador de `useState`
+   * en vez de en un efecto: así ya salen en el primer render y no provoca un
+   * render extra. Un JSON corrupto devuelve listas vacías en lugar de romper.
+   */
+  const [savedAccents, setSavedAccents] = useState<CustomColor[]>(() => readCustomColors().accents);
+  const [savedBgs, setSavedBgs] = useState<CustomColor[]>(() => readCustomColors().bgs);
 
   const saveToStorage = (accents: CustomColor[], bgs: CustomColor[]) => {
-      localStorage.setItem('yugi-tracker-custom-themes', JSON.stringify({ accents, bgs }));
+      try {
+          localStorage.setItem(CUSTOM_THEMES_KEY, JSON.stringify({ accents, bgs }));
+      } catch (e) {
+          console.error('No se pudieron guardar los colores personalizados:', e);
+      }
   };
 
   const handleAddCustom = (type: 'accent' | 'bg') => {
@@ -196,7 +213,7 @@ export const ThemeModal: React.FC<Props> = ({ isOpen, onClose }) => {
                         animate={{ y: 0, opacity: 1 }}
                         exit={{ y: -5, opacity: 0 }}
                         className="text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-main via-primary to-main tracking-tight z-10 flex items-center gap-2"
-                        style={{ textShadow: '0 4px 20px rgba(var(--color-primary), 0.3)' }}
+                        style={{ textShadow: '0 4px 20px rgba(var(--rgb-primary), 0.3)' }}
                     >
                         {identity.accent} <span className="text-primary"> // </span> {identity.bg}
                     </motion.h2>

@@ -1,8 +1,8 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { searchCards } from '../../services/cardService';
+import { searchCards, MIN_QUERY_LENGTH } from '../../services/cardService';
 import type { ApiCard, MainCardType, MonsterType, CardProperty } from '../../types';
-import { debounce, analyzeCardType, getRarityWeight } from '../../utils';
+import { analyzeCardType, getRarityWeight } from '../../utils';
 import { Search, Loader2, X, Filter } from 'lucide-react';
 import { CardFilter } from '../CardFilter';
 
@@ -24,6 +24,9 @@ export const SearchModal: React.FC<Props> = ({ isOpen, onClose, onSelect }) => {
   const [results, setResults] = useState<ApiCard[]>([]);
   const [loading, setLoading] = useState(false);
   const [query, setQuery] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  // Cambiar este número obliga a repetir la búsqueda con el mismo texto.
+  const [retryToken, setRetryToken] = useState(0);
   
   // Filter State
   const [isFilterOpen, setIsFilterOpen] = useState(false);
@@ -35,18 +38,60 @@ export const SearchModal: React.FC<Props> = ({ isOpen, onClose, onSelect }) => {
       rarities: []
   });
 
-  const performSearch = debounce(async (val: string) => {
-    if (val.length < 3) return;
-    setLoading(true);
-    const data = await searchCards(val);
-    setResults(data);
-    setLoading(false);
-  }, 500);
+  /*
+   * El retardo se creaba dentro del cuerpo del componente, así que se rehacía
+   * en cada render y su `clearTimeout` no cancelaba el anterior: salía una
+   * petición por cada tecla pulsada. Como YGOPRODeck bloquea una hora al pasar
+   * de 20 peticiones por segundo, era un problema de verdad y no solo de
+   * eficiencia.
+   *
+   * Ahora el temporizador y la petición en curso se cancelan al cambiar el
+   * texto, de modo que solo sobrevive la última: de paso se evita que una
+   * respuesta lenta pise a otra más reciente.
+   */
+  useEffect(() => {
+    const trimmed = query.trim();
 
-  const handleInput = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setQuery(e.target.value);
-    performSearch(e.target.value);
-  };
+    if (trimmed.length < MIN_QUERY_LENGTH) {
+      setResults([]);
+      setLoading(false);
+      setError(null);
+      return;
+    }
+
+    const controller = new AbortController();
+    setLoading(true);
+    setError(null);
+
+    const timer = setTimeout(() => {
+      searchCards(trimmed, controller.signal)
+        .then((data) => {
+          setResults(data);
+          setLoading(false);
+        })
+        .catch((e: unknown) => {
+          if (controller.signal.aborted) return;
+          setResults([]);
+          setError(e instanceof Error ? e.message : 'No se pudo completar la búsqueda.');
+          setLoading(false);
+        });
+    }, 400);
+
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
+  }, [query, retryToken]);
+
+  // Cerrar con Escape, como cualquier diálogo.
+  useEffect(() => {
+    if (!isOpen) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, [isOpen, onClose]);
 
   // 1. Derive Available Options from Search Results
   const { availableSets, availableRarities } = useMemo(() => {
@@ -118,17 +163,25 @@ export const SearchModal: React.FC<Props> = ({ isOpen, onClose, onSelect }) => {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start pt-10 sm:pt-20 justify-center bg-black/80 backdrop-blur-sm p-4">
-      <motion.div 
+    <div
+      className="fixed inset-0 z-50 flex items-start pt-10 sm:pt-20 justify-center bg-black/80 backdrop-blur-sm p-4"
+      onClick={onClose}
+    >
+      <motion.div
         initial={{ opacity: 0, y: 30, scale: 0.98 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
         exit={{ opacity: 0, y: 30, scale: 0.98 }}
         transition={{ duration: 0.2, ease: "easeOut" }}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="titulo-buscar-carta"
+        // Sin esto, pinchar dentro del panel cerraría el modal por el clic del fondo.
+        onClick={(e) => e.stopPropagation()}
         className="w-full max-w-2xl bg-bg-surface border border-border-base rounded-2xl shadow-2xl flex flex-col max-h-[85vh]"
       >
         <div className="p-4 border-b border-border-base flex items-center justify-between shrink-0 bg-bg-panel rounded-t-2xl">
-            <h3 className="font-bold text-lg text-main">Añadir Carta</h3>
-            <button onClick={onClose} className="p-1 hover:bg-main/10 rounded text-main/70 hover:text-main"><X size={20} /></button>
+            <h3 id="titulo-buscar-carta" className="font-bold text-lg text-main">Añadir Carta</h3>
+            <button onClick={onClose} aria-label="Cerrar" className="p-1 hover:bg-main/10 rounded text-main/70 hover:text-main"><X size={20} /></button>
         </div>
 
         <div className="p-4 shrink-0 space-y-1 bg-bg-surface z-50">
@@ -139,8 +192,9 @@ export const SearchModal: React.FC<Props> = ({ isOpen, onClose, onSelect }) => {
                         autoFocus
                         type="text" 
                         value={query}
-                        onChange={handleInput}
-                        placeholder="Buscar carta (min. 3 letras)..."
+                        onChange={(e) => setQuery(e.target.value)}
+                        placeholder={`Buscar carta (mín. ${MIN_QUERY_LENGTH} letras)...`}
+                        aria-label="Buscar carta por nombre"
                         className="w-full bg-bg-panel border border-border-base text-main rounded-xl pl-10 pr-4 py-3 text-lg focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none placeholder-main/30"
                     />
                 </div>
@@ -172,12 +226,22 @@ export const SearchModal: React.FC<Props> = ({ isOpen, onClose, onSelect }) => {
         </div>
 
         <div className="flex-1 overflow-y-auto p-4 custom-scrollbar bg-bg-surface/50 rounded-b-2xl">
-            {loading ? (
+            {error ? (
+                <div className="flex flex-col items-center justify-center py-10 px-6 text-center gap-3">
+                    <p className="text-red-400 text-sm">{error}</p>
+                    <button
+                        onClick={() => setRetryToken((t) => t + 1)}
+                        className="text-xs font-bold text-primary hover:underline"
+                    >
+                        Reintentar
+                    </button>
+                </div>
+            ) : loading ? (
                 <div className="flex flex-col items-center justify-center py-10 text-main/50">
                     <Loader2 className="animate-spin mb-2" size={30} />
                     <p>Consultando base de datos...</p>
                 </div>
-            ) : filteredResults.length === 0 && query.length >= 3 ? (
+            ) : filteredResults.length === 0 && query.trim().length >= MIN_QUERY_LENGTH ? (
                  <div className="text-center py-10 text-main/50">
                     {results.length > 0 ? 'No hay cartas que coincidan con los filtros.' : 'No se encontraron resultados.'}
                  </div>

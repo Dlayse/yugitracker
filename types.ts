@@ -1,9 +1,15 @@
+/** Encuadre de la imagen de portada de una carpeta. */
+export type FolderAlign = 'top' | 'center' | 'bottom';
+
+/** Estado de conservación, de Mint a Poor. */
+export type CardCondition = 'MT' | 'NM' | 'EX' | 'GD' | 'LP' | 'PL' | 'PO';
+
 export interface Folder {
   id: string;
   name: string;
   subtext?: string;
   img: string;
-  align: 'top' | 'center' | 'bottom';
+  align: FolderAlign;
   // Sorting preferences per folder
   cardSort?: CardSort;
   cardSortDir?: SortDirection;
@@ -23,7 +29,7 @@ export interface Card {
   type: string; // Legacy API type string (e.g. "Effect Monster")
   paid: number;
   lang: string;
-  condition: 'MT' | 'NM' | 'EX' | 'GD' | 'LP' | 'PL' | 'PO';
+  condition: CardCondition;
   obs: string;
   tags: string[];
   is1st: boolean;

@@ -95,7 +95,7 @@ function App() {
             } else {
                 toast("Archivo inválido", "err");
             }
-        } catch (ex) {
+        } catch {
             toast("Error al leer archivo", "err");
         }
     };
@@ -322,18 +322,31 @@ function App() {
 
     if (isHome) {
         // --- FOLDERS PROCESSING ---
-        let list = baseData as Folder[];
+        const list = baseData as Folder[];
         
         const systemFolder = list.find(f => f.id === ID_ALL);
         const userFolders = list.filter(f => f.id !== ID_ALL);
 
         if (sortFolders !== 'manual') {
             const dir = sortFoldersDir === 'asc' ? 1 : -1;
+
+            /*
+             * El valor de cada carpeta se calcula una sola vez. Antes se hacía
+             * dentro del comparador, que recorre la colección entera en cada
+             * comparación: con muchas carpetas y cartas el orden se notaba.
+             */
+            const valuePerFolder = new Map<string, number>();
+            if (sortFolders === 'value') {
+                for (const card of state.db.cards) {
+                    valuePerFolder.set(card.folderId, (valuePerFolder.get(card.folderId) ?? 0) + card.paid);
+                }
+            }
+
             userFolders.sort((a, b) => {
                 if (sortFolders === 'name') return a.name.localeCompare(b.name) * dir;
                 if (sortFolders === 'value') {
-                    const valA = state.db.cards.filter(c => c.folderId === a.id).reduce((s, c) => s + c.paid, 0);
-                    const valB = state.db.cards.filter(c => c.folderId === b.id).reduce((s, c) => s + c.paid, 0);
+                    const valA = valuePerFolder.get(a.id) ?? 0;
+                    const valB = valuePerFolder.get(b.id) ?? 0;
                     return (valB - valA) * dir;
                 }
                 return 0;
@@ -343,7 +356,9 @@ function App() {
 
     } else {
         // --- CARDS PROCESSING ---
-        let list = baseData as Card[];
+        // Copia propia: más abajo se ordena en el sitio, y `baseData` es un
+        // valor memoizado que no debe mutarse.
+        let list = [...(baseData as Card[])];
 
         // 0. FILTER: Wanted Cards
         if (!showWantedCards) {

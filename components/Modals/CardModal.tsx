@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useStore } from '../../context/StoreContext';
-import type { ApiCard, Card, CardSet } from '../../types';
+import type { ApiCard, Card, CardSet, CardCondition } from '../../types';
 import { generateId, getCardMarketLink, getRarityColor, ID_ALL, getConditionMeta, analyzeCardType } from '../../utils';
 import { getCardDetails } from '../../services/cardService';
 import { ExternalLink, Check, Loader2, Star, ShieldAlert, Target, Info, Calendar, Database, Sparkles } from 'lucide-react';
@@ -164,8 +164,13 @@ export const CardModal: React.FC<Props> = ({ isOpen, onClose, initialApiCard, ex
       setApiData(data || null);
       setLoading(false);
     };
-    load();
-  }, [isOpen, initialApiCard, existingCard]);
+    // Si la API falla, el modal se quedaba girando para siempre sin decir nada.
+    load().catch((e: unknown) => {
+      console.error('No se pudieron cargar los datos de la carta:', e);
+      toast('No se pudieron cargar los datos de la carta.', 'err');
+      setLoading(false);
+    });
+  }, [isOpen, initialApiCard, existingCard, toast]);
 
   // Listen for new folders created from the FolderModal
   useEffect(() => {
@@ -190,7 +195,7 @@ export const CardModal: React.FC<Props> = ({ isOpen, onClose, initialApiCard, ex
     setIsSubmitting(true);
 
     const finalImg = customImg.length > 10 ? customImg : selectedImg;
-    let tagsArr = formData.tags.split(' ').filter(t => t.trim().length > 0).map(t => t.startsWith('#') ? t : '#'+t);
+    const tagsArr = formData.tags.split(' ').filter(t => t.trim().length > 0).map(t => t.startsWith('#') ? t : '#'+t);
 
     if (formData.isWanted) {
         if (!tagsArr.includes('#wanted')) tagsArr.push('#wanted');
@@ -215,7 +220,7 @@ export const CardModal: React.FC<Props> = ({ isOpen, onClose, initialApiCard, ex
         img: finalImg,
         paid: formData.isWanted ? 0 : (parseFloat(formData.paid) || 0),
         lang: formData.lang,
-        condition: formData.isWanted ? 'NM' : (formData.condition as any),
+        condition: formData.isWanted ? 'NM' : (formData.condition as CardCondition),
         obs: formData.obs.substring(0, MAX_OBS), 
         tags: tagsArr,
         is1st: formData.isWanted ? false : formData.is1st,
@@ -521,7 +526,7 @@ export const CardModal: React.FC<Props> = ({ isOpen, onClose, initialApiCard, ex
                                                 return (
                                                     <button
                                                         key={cond}
-                                                        onClick={() => setFormData({...formData, condition: cond as any})}
+                                                        onClick={() => setFormData({...formData, condition: cond as CardCondition})}
                                                         className={`flex-1 min-w-[50px] py-2 rounded-lg text-sm font-bold border transition-all ${
                                                             isSelected 
                                                                 ? 'bg-opacity-20 text-main shadow-lg' 

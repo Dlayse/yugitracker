@@ -31,8 +31,8 @@ export const FolderItem: React.FC<Props> = React.memo(({ folder, onEdit, viewMod
       }
   };
 
-  // `onDragStart` lo intercepta framer-motion para sus gestos y no llega al DOM;
-  // se engancha en fase de captura. Ver la nota equivalente en CardItem.
+  // Fase de captura para esquivar el choque de tipos con framer-motion.
+  // Ver la nota más larga en CardItem.
   const handleDragStart = (e: React.DragEvent) => {
     if (isSystem || !isManualSort || isSelectionMode) { e.preventDefault(); return; }
     e.dataTransfer.setData('text/plain', folder.id);
@@ -115,10 +115,10 @@ export const FolderItem: React.FC<Props> = React.memo(({ folder, onEdit, viewMod
             // LIST CONTAINER: Semantic colors + Border
             className={`flex items-center gap-4 p-3 bg-bg-surface rounded-lg cursor-pointer transition-all duration-300 group h-[80px] relative overflow-hidden border ${
                 isSystem 
-                ? 'border-primary/50 bg-primary/5 cursor-default hover:shadow-[0_0_15px_rgba(var(--color-primary),0.15)]' 
+                ? 'border-primary/50 bg-primary/5 cursor-default hover:shadow-[0_0_15px_rgba(var(--rgb-primary),0.15)]' 
                 : (isSelectionMode && isSelected 
                     ? 'border-primary ring-1 ring-primary' 
-                    : 'border-border-base shadow-sm hover:border-primary/40 hover:bg-main/5 hover:shadow-[0_0_15px_rgba(var(--color-primary),0.08)]')
+                    : 'border-border-base shadow-sm hover:border-primary/40 hover:bg-main/5 hover:shadow-[0_0_15px_rgba(var(--rgb-primary),0.08)]')
             }`}
         >
             {isSelectionMode && !isSystem && (
@@ -179,10 +179,10 @@ export const FolderItem: React.FC<Props> = React.memo(({ folder, onEdit, viewMod
       // GRID CONTAINER: bg-bg-surface, border-border-base
       className={`relative bg-bg-surface border rounded-xl overflow-hidden group cursor-pointer shadow-lg flex flex-col h-full transition-all duration-300 ${
           isSystem 
-          ? 'border-primary shadow-[0_0_15px_rgba(var(--color-primary),0.15)] cursor-default' 
+          ? 'border-primary shadow-[0_0_15px_rgba(var(--rgb-primary),0.15)] cursor-default' 
           : (isSelectionMode && isSelected
               ? 'border-primary ring-2 ring-primary scale-95'
-              : 'border-border-base hover:border-primary/40 hover:shadow-[0_0_20px_rgba(var(--color-primary),0.15)]')
+              : 'border-border-base hover:border-primary/40 hover:shadow-[0_0_20px_rgba(var(--rgb-primary),0.15)]')
       }`}
     >
         <div className="relative w-full aspect-[3/2] overflow-hidden bg-black shrink-0">

@@ -34,10 +34,11 @@ export const CardItem: React.FC<Props> = React.memo(({ card, onPress, viewMode, 
   /*
    * Reordenar arrastrando (solo con orden manual).
    *
-   * Ojo con `onDragStart`: framer-motion reserva ese nombre para su propio
-   * sistema de gestos y no lo reenvía al DOM, así que el `dataTransfer` nunca
-   * llegaba a rellenarse y el soltar no encontraba la carta arrastrada. Por eso
-   * se engancha en fase de captura, que framer sí deja pasar.
+   * Se usa `onDragStartCapture` y no `onDragStart` por los tipos: framer-motion
+   * declara `onDragStart` con la firma de su propio sistema de gestos, que no
+   * encaja con la del evento del DOM. En la práctica sí reenvía el evento
+   * mientras no se use su prop `drag` (comprobado), pero engancharse en fase de
+   * captura evita el conflicto sin recurrir a un cast.
    */
   const handleDragStart = (e: React.DragEvent) => {
     if (!isManualSort || isSelectionMode) { e.preventDefault(); return; }
@@ -278,7 +279,7 @@ export const CardItem: React.FC<Props> = React.memo(({ card, onPress, viewMode, 
                 className={`group relative grid grid-cols-[100px_2fr_3fr_1fr] gap-6 p-4 bg-bg-surface rounded-xl cursor-pointer transition-all duration-300 items-center h-[140px] border ${
                     isSelectionMode 
                         ? (isSelected ? 'border-primary ring-1 ring-primary' : 'border-border-base opacity-80 hover:opacity-100 shadow-sm')
-                        : 'border-border-base shadow-sm hover:border-primary/40 hover:bg-main/5 hover:shadow-[0_0_15px_rgba(var(--color-primary),0.1)] hover:z-10'
+                        : 'border-border-base shadow-sm hover:border-primary/40 hover:bg-main/5 hover:shadow-[0_0_15px_rgba(var(--rgb-primary),0.1)] hover:z-10'
                 }`}
             >
                 {/* LIST VIEW SELECTION OVERLAY */}
@@ -425,7 +426,7 @@ export const CardItem: React.FC<Props> = React.memo(({ card, onPress, viewMode, 
         className={`group relative bg-bg-surface rounded-xl overflow-hidden cursor-pointer shadow-lg flex flex-col transition-all duration-300 border ${
             isSelectionMode 
                 ? (isSelected ? 'border-primary ring-2 ring-primary scale-95' : 'border-border-base opacity-75 hover:opacity-100')
-                : 'border-border-base hover:shadow-[0_0_20px_rgba(var(--color-primary),0.15)] hover:border-primary/40'
+                : 'border-border-base hover:shadow-[0_0_20px_rgba(var(--rgb-primary),0.15)] hover:border-primary/40'
         }`}
         >
             <div className="card-container relative w-full aspect-[421/614] bg-[#111] overflow-hidden shrink-0">

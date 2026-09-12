@@ -21,6 +21,17 @@ export default tseslint.config(
       ...reactHooks.configs.recommended.rules,
       'react-refresh/only-export-components': ['warn', { allowConstantExport: true }],
       '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_' }],
+
+      /*
+       * Aviso en vez de error, a propósito.
+       *
+       * La regla marca el patrón "reiniciar el estado local cuando cambia una
+       * prop" que usan varios modales y la vista de álbum. Es mejorable —lo
+       * idiomático sería remontar el componente con una `key`— pero son sitios
+       * que hoy funcionan, y convertirlo en error obligaría a reescribirlos
+       * todos a la vez. Queda visible para arreglarlo poco a poco.
+       */
+      'react-hooks/set-state-in-effect': 'warn',
     },
   },
 );

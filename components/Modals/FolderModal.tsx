@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useStore } from '../../context/StoreContext';
-import type { Folder } from '../../types';
+import type { Folder, FolderAlign } from '../../types';
 import { generateId, ID_ALL, normalizeStr } from '../../utils';
 
 interface Props {
@@ -50,7 +50,7 @@ export const FolderModal: React.FC<Props> = ({ isOpen, onClose, editId, onSave }
       name: formData.name.trim(),
       subtext: formData.subtext || '',
       img: formData.img || 'https://images.ygoprodeck.com/images/cards/back_high.jpg',
-      align: (formData.align as any) || 'center'
+      align: (formData.align as FolderAlign) || 'center'
     };
 
     dispatch({ type: 'SAVE_FOLDER', payload: newFolder });
@@ -152,7 +152,7 @@ export const FolderModal: React.FC<Props> = ({ isOpen, onClose, editId, onSave }
               <label className="block text-xs font-medium text-muted mb-1">Alineación</label>
               <select 
                 value={formData.align}
-                onChange={e => setFormData({ ...formData, align: e.target.value as any })}
+                onChange={e => setFormData({ ...formData, align: e.target.value as FolderAlign })}
                 className="w-full bg-bg-panel border border-border-base text-main rounded-lg p-2.5 focus:border-primary focus:outline-none"
               >
                 <option value="center">Centro</option>
