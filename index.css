@@ -1,0 +1,98 @@
+@import "tailwindcss";
+
+/* El tema se cambia añadiendo/quitando la clase `dark` en <html>. */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/*
+ * Paleta base. Se guardan los canales RGB sueltos (no el color entero) porque
+ * el selector de temas los reescribe en caliente desde JavaScript, y así
+ * Tailwind puede seguir aplicando opacidades sobre ellos.
+ */
+:root {
+  --rgb-primary: 251 191 36;
+  --rgb-bg-body: 5 5 7;
+  --rgb-bg-surface: 24 24 27;
+  --rgb-bg-panel: 39 39 42;
+  --rgb-text-main: 255 255 255;
+  --rgb-text-muted: 156 163 175;
+  --rgb-text-sub: 107 114 128;
+
+  /* Tamaño de la miniatura en la cuadrícula; lo ajusta el control del Header. */
+  --grid-size: 180px;
+}
+
+/*
+ * `inline` hace que las utilidades apunten a la variable en vez de copiar su
+ * valor: sin esto, cambiar --rgb-* en caliente no repintaría nada.
+ */
+@theme inline {
+  --color-primary: rgb(var(--rgb-primary));
+  --color-bg-body: rgb(var(--rgb-bg-body));
+  --color-bg-surface: rgb(var(--rgb-bg-surface));
+  --color-bg-panel: rgb(var(--rgb-bg-panel));
+
+  --color-main: rgb(var(--rgb-text-main));
+  --color-muted: rgb(var(--rgb-text-muted));
+  --color-sub: rgb(var(--rgb-text-sub));
+
+  /* Borde semántico: el color del texto al 10%. */
+  --color-border-base: rgb(var(--rgb-text-main) / 0.1);
+
+  /* Colores que no dependen del tema. */
+  --color-static-white: #ffffff;
+  --color-static-black: #000000;
+
+  --font-sans: Inter, ui-sans-serif, system-ui, sans-serif;
+}
+
+@layer base {
+  body {
+    background-color: rgb(var(--rgb-bg-body));
+    color: rgb(var(--rgb-text-main));
+    background-image:
+      radial-gradient(circle at 15% 50%, rgb(var(--rgb-primary) / 0.08), transparent 25%),
+      radial-gradient(circle at 85% 30%, rgb(59 130 246 / 0.05), transparent 25%);
+    background-attachment: fixed;
+    min-height: 100vh;
+    transition: background-color 0.5s ease, color 0.5s ease;
+  }
+
+  /* Respeta a quien haya pedido menos movimiento en su sistema. */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+
+  /* Foco visible y coherente en todo lo que se pueda tabular. */
+  :focus-visible {
+    outline: 2px solid rgb(var(--rgb-primary));
+    outline-offset: 2px;
+  }
+}
+
+@layer utilities {
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: rgb(var(--rgb-text-main) / 0.2);
+    border-radius: 3px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: rgb(var(--rgb-primary));
+  }
+
+  .mask-fade-r {
+    mask-image: linear-gradient(to right, black 85%, transparent 100%);
+  }
+}

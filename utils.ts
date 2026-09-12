@@ -1,4 +1,4 @@
-import { Card, MainCardType, MonsterType, CardProperty } from './types';
+import type { MainCardType, MonsterType, CardProperty } from './types';
 
 export const ID_ALL = 'ALL_CARDS_SYSTEM';
 

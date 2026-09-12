@@ -1,4 +1,4 @@
-import { ApiCard } from '../types';
+import type { ApiCard } from '../types';
 import { normalizeStr } from '../utils';
 
 // Official YGOPRODeck API v7

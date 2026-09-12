@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useStore } from '../../context/StoreContext';
-import { Folder } from '../../types';
+import type { Folder } from '../../types';
 import { generateId, ID_ALL, normalizeStr } from '../../utils';
 
 interface Props {

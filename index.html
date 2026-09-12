@@ -1,93 +1,66 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="es" class="dark">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Yugi-Tracker Platinum</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <style>
-      :root {
-        /* Default Colors (Amber / Zinc) stored as RGB channels for Tailwind opacity support */
-        --color-primary: 251 191 36;
-        --color-bg-body: 5 5 7;
-        --color-bg-surface: 24 24 27;
-        --color-bg-panel: 39 39 42;
 
-        /* Dynamic Text Colors (Default Dark Mode) */
-        --color-text-main: 255 255 255; /* White */
-        --color-text-muted: 156 163 175; /* Gray 400 */
-        --color-text-sub: 107 114 128;   /* Gray 500 */
-      }
-    </style>
+    <title>Yugi-Tracker — Tu colección de Yu-Gi-Oh!</title>
+    <meta
+      name="description"
+      content="Organiza tu colección de cartas de Yu-Gi-Oh! en carpetas: rareza, estado, edición, idioma y valor de cada carta."
+    />
+    <meta name="theme-color" content="#050507" />
+
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Yugi-Tracker — Tu colección de Yu-Gi-Oh!" />
+    <meta
+      property="og:description"
+      content="Organiza tu colección de cartas de Yu-Gi-Oh! en carpetas: rareza, estado, edición, idioma y valor de cada carta."
+    />
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <!-- Las carátulas vienen de aquí: adelantar el handshake acelera la primera pintada. -->
+    <link rel="preconnect" href="https://images.ygoprodeck.com" />
+
     <script>
-      tailwind.config = {
-        darkMode: 'class',
-        theme: {
-          extend: {
-            fontFamily: {
-              sans: ['Inter', 'sans-serif'],
-            },
-            colors: {
-              primary: 'rgb(var(--color-primary) / <alpha-value>)',
-              'bg-body': 'rgb(var(--color-bg-body) / <alpha-value>)',
-              'bg-surface': 'rgb(var(--color-bg-surface) / <alpha-value>)',
-              'bg-panel': 'rgb(var(--color-bg-panel) / <alpha-value>)',
-              
-              /* Dynamic Text Colors */
-              main: 'rgb(var(--color-text-main) / <alpha-value>)',
-              muted: 'rgb(var(--color-text-muted) / <alpha-value>)',
-              sub: 'rgb(var(--color-text-sub) / <alpha-value>)',
-              
-              /* Semantic Border (10% of text color) */
-              'border-base': 'rgb(var(--color-text-main) / 0.1)',
-              
-              /* Static Colors (Stay constant regardless of theme) */
-              'static-white': '#ffffff',
-              'static-black': '#000000',
-            }
+      /*
+       * Aplica el tema guardado ANTES de la primera pintada. Sin esto se ve un
+       * parpadeo con los colores por defecto hasta que React monta y corre el
+       * efecto que lee localStorage.
+       */
+      (function () {
+        try {
+          var raw = localStorage.getItem('yugi-tracker-platinum-theme');
+          if (!raw) return;
+          var t = JSON.parse(raw);
+          var root = document.documentElement;
+          var set = function (name, value) {
+            if (typeof value === 'string') root.style.setProperty(name, value);
+          };
+          set('--rgb-primary', t.primary);
+          set('--rgb-bg-body', t.bgBody);
+          set('--rgb-bg-surface', t.bgSurface);
+          set('--rgb-bg-panel', t.bgPanel);
+          if (t.isDark === false) {
+            set('--rgb-text-main', '20 20 20');
+            set('--rgb-text-muted', '75 85 99');
+            root.classList.remove('dark');
           }
+        } catch (e) {
+          /* Un tema corrupto no debe impedir que cargue la aplicación. */
         }
-      }
+      })();
     </script>
-    <style>
-      body {
-        background-color: rgb(var(--color-bg-body));
-        color: rgb(var(--color-text-main));
-        /* Dynamic radial gradient based on vars */
-        background-image: 
-          radial-gradient(circle at 15% 50%, rgba(var(--color-primary), 0.08), transparent 25%), 
-          radial-gradient(circle at 85% 30%, rgba(59, 130, 246, 0.05), transparent 25%);
-        min-height: 100vh;
-        transition: background-color 0.5s ease, color 0.5s ease;
-      }
-      /* Custom Scrollbar */
-      ::-webkit-scrollbar { width: 6px; height: 6px; }
-      ::-webkit-scrollbar-track { background: transparent; }
-      ::-webkit-scrollbar-thumb { background: rgba(var(--color-text-main), 0.2); border-radius: 3px; }
-      ::-webkit-scrollbar-thumb:hover { background: rgb(var(--color-primary)); }
-      
-      /* Utilities */
-      .mask-fade-r {
-        mask-image: linear-gradient(to right, black 85%, transparent 100%);
-      }
-    </style>
-  <script type="importmap">
-{
-  "imports": {
-    "react/": "https://esm.sh/react@^19.2.3/",
-    "react": "https://esm.sh/react@^19.2.3",
-    "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
-    "framer-motion": "https://esm.sh/framer-motion@^12.25.0",
-    "lucide-react": "https://esm.sh/lucide-react@^0.562.0",
-    "react-dom": "https://esm.sh/react-dom@^19.2.3"
-  }
-}
-</script>
-<link rel="stylesheet" href="/index.css">
-</head>
+  </head>
   <body class="antialiased overflow-y-scroll transition-colors duration-500">
     <div id="root"></div>
-  <script type="module" src="/index.tsx"></script>
-</body>
+    <script type="module" src="/index.tsx"></script>
+  </body>
 </html>

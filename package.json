@@ -1,23 +1,36 @@
 {
-  "name": "yugi-tracker-platinum",
+  "name": "yugi-tracker",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
+  "description": "Gestor de colecciones de cartas de Yu-Gi-Oh!: carpetas, estados, rarezas, brillos y valoración.",
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
-    "preview": "vite preview"
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "react": "^19.2.3",
-    "react-dom": "^19.2.3",
     "framer-motion": "^12.25.0",
-    "lucide-react": "^0.562.0"
+    "lucide-react": "^0.562.0",
+    "react": "^19.2.3",
+    "react-dom": "^19.2.3"
   },
   "devDependencies": {
-    "@types/node": "^22.14.0",
+    "@eslint/js": "^9.39.0",
+    "@tailwindcss/vite": "^4.1.18",
+    "@types/node": "^22.20.2",
+    "@types/react": "^19.2.7",
+    "@types/react-dom": "^19.2.4",
     "@vitejs/plugin-react": "^5.0.0",
+    "eslint": "^9.39.0",
+    "eslint-plugin-react-hooks": "^7.0.1",
+    "eslint-plugin-react-refresh": "^0.4.24",
+    "globals": "^16.5.0",
+    "tailwindcss": "^4.1.18",
     "typescript": "~5.8.2",
+    "typescript-eslint": "^8.48.1",
     "vite": "^6.2.0"
   }
 }

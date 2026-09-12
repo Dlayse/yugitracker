@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Card, AlbumColumns } from '../types';
+import type { Card, AlbumColumns } from '../types';
 import { CardItem } from './CardItem';
 import { useStore } from '../context/StoreContext';
 import { ChevronLeft, ChevronRight, Grid as GridIcon } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, type Variants } from 'framer-motion';
 
 interface Props {
   cards: Card[];
@@ -74,7 +74,7 @@ export const AlbumView: React.FC<Props> = ({ cards, onCardPress, isSelectionMode
   const placeholders = Array.from({ length: Math.max(0, emptySlots) });
 
   // Animation Variants
-  const variants = {
+  const variants: Variants = {
     enter: (dir: number) => ({
       rotateY: dir > 0 ? 90 : -90,
       opacity: 0,

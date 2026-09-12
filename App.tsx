@@ -11,7 +11,7 @@ import { ThemeModal } from './components/Modals/ThemeModal';
 import { CardFilter } from './components/CardFilter';
 import { ToastContainer } from './components/Toast';
 import { ID_ALL, getTypeWeight, getRarityWeight, normalizeStr, analyzeCardType } from './utils';
-import { Card, ApiCard, Folder, MainCardType, MonsterType, CardProperty } from './types';
+import type { Card, ApiCard, Folder, MainCardType, MonsterType, CardProperty } from './types';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Trash, X } from 'lucide-react';
 
@@ -519,11 +519,10 @@ function App() {
                     style={{ gridTemplateColumns: `repeat(auto-fill, minmax(var(--grid-size, ${gridSize}px), 1fr))` }}
                 >
                     {isHome ? (
-                        (finalData as Folder[]).map((folder, idx) => (
+                        (finalData as Folder[]).map((folder) => (
                             <FolderItem 
                                 key={folder.id} 
                                 folder={folder} 
-                                index={idx} 
                                 onEdit={handleFolderEdit}
                                 viewMode="grid"
                                 isSelectionMode={isSelectionMode}
@@ -555,11 +554,10 @@ function App() {
                     className="flex flex-col gap-3 w-full"
                 >
                     {isHome ? (
-                        (finalData as Folder[]).map((folder, idx) => (
+                        (finalData as Folder[]).map((folder) => (
                             <FolderItem 
                                 key={folder.id} 
                                 folder={folder} 
-                                index={idx} 
                                 onEdit={handleFolderEdit}
                                 viewMode="list"
                                 isSelectionMode={isSelectionMode}
@@ -593,11 +591,10 @@ function App() {
                 >
                     {isHome ? (
                         // Fallback to Grid for Folders in Display Mode (or could render cleaner folders)
-                        (finalData as Folder[]).map((folder, idx) => (
+                        (finalData as Folder[]).map((folder) => (
                             <FolderItem 
                                 key={folder.id} 
                                 folder={folder} 
-                                index={idx} 
                                 onEdit={handleFolderEdit}
                                 viewMode="grid" // Keep standard grid for folders even in display mode
                                 isSelectionMode={isSelectionMode}
@@ -634,11 +631,10 @@ function App() {
                             className="grid gap-5 w-full transition-[gap] duration-300 ease-out"
                             style={{ gridTemplateColumns: `repeat(auto-fill, minmax(var(--grid-size, ${gridSize}px), 1fr))` }}
                         >
-                             {(finalData as Folder[]).map((folder, idx) => (
+                             {(finalData as Folder[]).map((folder) => (
                                 <FolderItem 
                                     key={folder.id} 
                                     folder={folder} 
-                                    index={idx} 
                                     onEdit={handleFolderEdit}
                                     viewMode="grid"
                                     isSelectionMode={isSelectionMode}

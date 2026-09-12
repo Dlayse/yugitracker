@@ -1,5 +1,5 @@
 import React from 'react';
-import { Folder, ViewMode } from '../types';
+import type { Folder, ViewMode } from '../types';
 import { useStore } from '../context/StoreContext';
 import { formatMoney, ID_ALL } from '../utils';
 import { Settings, CheckCircle2, Circle } from 'lucide-react';
@@ -8,14 +8,13 @@ import { motion } from 'framer-motion';
 interface Props {
   folder: Folder;
   onEdit: (id: string) => void;
-  index: number;
   viewMode: ViewMode;
   isSelectionMode?: boolean;
   isSelected?: boolean;
   onToggleSelect?: () => void;
 }
 
-export const FolderItem: React.FC<Props> = React.memo(({ folder, onEdit, index, viewMode, isSelectionMode, isSelected, onToggleSelect }) => {
+export const FolderItem: React.FC<Props> = React.memo(({ folder, onEdit, viewMode, isSelectionMode, isSelected, onToggleSelect }) => {
   const { state, dispatch, toast } = useStore();
   
   const isSystem = folder.id === ID_ALL;
@@ -32,6 +31,8 @@ export const FolderItem: React.FC<Props> = React.memo(({ folder, onEdit, index, 
       }
   };
 
+  // `onDragStart` lo intercepta framer-motion para sus gestos y no llega al DOM;
+  // se engancha en fase de captura. Ver la nota equivalente en CardItem.
   const handleDragStart = (e: React.DragEvent) => {
     if (isSystem || !isManualSort || isSelectionMode) { e.preventDefault(); return; }
     e.dataTransfer.setData('text/plain', folder.id);
@@ -106,7 +107,7 @@ export const FolderItem: React.FC<Props> = React.memo(({ folder, onEdit, index, 
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             draggable={!isSystem && isManualSort && !isSelectionMode}
-            onDragStart={handleDragStart}
+            onDragStartCapture={handleDragStart}
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
             onDrop={handleDrop}
@@ -168,7 +169,7 @@ export const FolderItem: React.FC<Props> = React.memo(({ folder, onEdit, index, 
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       draggable={!isSystem && isManualSort && !isSelectionMode}
-      onDragStart={handleDragStart}
+      onDragStartCapture={handleDragStart}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}

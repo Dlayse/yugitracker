@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useStore } from '../../context/StoreContext';
-import { X, Check, Pipette, Sparkles, Plus, Trash2, Save, PaintBucket, LayoutTemplate } from 'lucide-react';
+import { X, Check, Pipette, Sparkles, Save, PaintBucket, LayoutTemplate } from 'lucide-react';
 import { hexToRgb, isColorDark, generateDerivedColors } from '../../utils';
 
 interface Props {

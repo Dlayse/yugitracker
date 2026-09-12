@@ -1,8 +1,7 @@
 import React, { useState, useMemo } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { useStore } from '../../context/StoreContext';
+import { motion } from 'framer-motion';
 import { searchCards } from '../../services/cardService';
-import { ApiCard, MainCardType, MonsterType, CardProperty } from '../../types';
+import type { ApiCard, MainCardType, MonsterType, CardProperty } from '../../types';
 import { debounce, analyzeCardType, getRarityWeight } from '../../utils';
 import { Search, Loader2, X, Filter } from 'lucide-react';
 import { CardFilter } from '../CardFilter';

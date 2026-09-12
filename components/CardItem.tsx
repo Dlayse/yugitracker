@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { Card, ViewMode } from '../types';
+import type { Card, ViewMode } from '../types';
 import { useStore } from '../context/StoreContext';
 import { formatMoney, getConditionMeta, getRarityColor, ID_ALL } from '../utils';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -31,7 +31,14 @@ export const CardItem: React.FC<Props> = React.memo(({ card, onPress, viewMode, 
   const showFolderBadge = state.ui.activeFolderId === ID_ALL && folder && folder.id !== ID_ALL;
   const isManualSort = state.ui.sortCards === 'manual';
 
-  // --- Drag & Drop Handlers ---
+  /*
+   * Reordenar arrastrando (solo con orden manual).
+   *
+   * Ojo con `onDragStart`: framer-motion reserva ese nombre para su propio
+   * sistema de gestos y no lo reenvía al DOM, así que el `dataTransfer` nunca
+   * llegaba a rellenarse y el soltar no encontraba la carta arrastrada. Por eso
+   * se engancha en fase de captura, que framer sí deja pasar.
+   */
   const handleDragStart = (e: React.DragEvent) => {
     if (!isManualSort || isSelectionMode) { e.preventDefault(); return; }
     e.dataTransfer.setData('text/card', card.uid);
@@ -262,7 +269,7 @@ export const CardItem: React.FC<Props> = React.memo(({ card, onPress, viewMode, 
                 animate={{ opacity: 1 }}
                 transition={{ duration: 0.3, ease: "easeOut" }}
                 draggable={isManualSort && !isSelectionMode}
-                onDragStart={handleDragStart}
+                onDragStartCapture={handleDragStart}
                 onDragOver={handleDragOver}
                 onDragLeave={handleDragLeave}
                 onDrop={handleDrop}
@@ -409,7 +416,7 @@ export const CardItem: React.FC<Props> = React.memo(({ card, onPress, viewMode, 
             layout: { duration: 0.3 }
         }}
         draggable={isManualSort && !isSelectionMode}
-        onDragStart={handleDragStart}
+        onDragStartCapture={handleDragStart}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { MainCardType, MonsterType, CardProperty } from '../types';
+import type { MainCardType, MonsterType, CardProperty } from '../types';
 import { X, Filter, ChevronDown, ChevronUp, Layers, Diamond, Tag } from 'lucide-react';
 import { useStore } from '../context/StoreContext';
 

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useStore } from '../../context/StoreContext';
-import { ApiCard, Card, CardSet, Folder } from '../../types';
+import type { ApiCard, Card, CardSet } from '../../types';
 import { generateId, getCardMarketLink, getRarityColor, ID_ALL, getConditionMeta, analyzeCardType } from '../../utils';
 import { getCardDetails } from '../../services/cardService';
 import { ExternalLink, Check, Loader2, Star, ShieldAlert, Target, Info, Calendar, Database, Sparkles } from 'lucide-react';
@@ -261,7 +261,6 @@ export const CardModal: React.FC<Props> = ({ isOpen, onClose, initialApiCard, ex
       else setFormData(prev => ({ ...prev, is1st: false, isLimited: false }));
   };
 
-  const currentFolder = state.db.folders.find(f => f.id === (existingCard?.folderId || formData.moveToFolder));
   
   // LOGIC TO DEDUPLICATE IMAGES
   // 1. Official API Images (Remove duplicates based on URL)

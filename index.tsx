@@ -2,17 +2,20 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
 import { StoreProvider } from './context/StoreContext';
+import { ErrorBoundary } from './components/ErrorBoundary';
+import './index.css';
 
 const rootElement = document.getElementById('root');
 if (!rootElement) {
-  throw new Error("Could not find root element to mount to");
+  throw new Error('No se encontró el elemento #root donde montar la aplicación.');
 }
 
-const root = ReactDOM.createRoot(rootElement);
-root.render(
+ReactDOM.createRoot(rootElement).render(
   <React.StrictMode>
-    <StoreProvider>
-      <App />
-    </StoreProvider>
-  </React.StrictMode>
+    <ErrorBoundary>
+      <StoreProvider>
+        <App />
+      </StoreProvider>
+    </ErrorBoundary>
+  </React.StrictMode>,
 );

@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useReducer, useCallback } from 'react';
-import { Database, Folder, Card, ViewMode, FolderSort, CardSort, ToastData, SortDirection, ThemeConfig, AlbumColumns } from '../types';
+import type { Database, Folder, Card, ViewMode, FolderSort, CardSort, ToastData, SortDirection, ThemeConfig, AlbumColumns } from '../types';
 import { ID_ALL, generateId } from '../utils';
 
 // --- State Definition ---
@@ -244,8 +244,8 @@ const reducer = (state: AppState, action: Action): AppState => {
         // New Folder: Initialize with defaults
         newFolders = [...state.db.folders, { 
             ...action.payload, 
-            cardSort: 'type', 
-            cardSortDir: 'asc' 
+            cardSort: 'type' as const,
+            cardSortDir: 'asc' as const,
         }];
       }
       return { ...state, db: { ...state.db, folders: newFolders } };
